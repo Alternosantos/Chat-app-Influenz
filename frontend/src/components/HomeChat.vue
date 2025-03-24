@@ -1,3 +1,4 @@
+<style src="@/components/style.css"></style>
 <template>
   <div class="chat-container">
     <div class="messages" ref="messages">
@@ -41,7 +42,7 @@ export default {
       }
     },
     async fetchHistory() {
-      const response = await fetch('http://localhost:8081/messages')
+      const response = await fetch('http://localhost:8080/messages')
       this.messages = await response.json()
       this.scrollToBottom()
     },
@@ -66,57 +67,3 @@ export default {
 }
 </script>
 
-<style scoped>
-.chat-container {
-  max-width: 600px;
-  margin: 20px auto;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.messages {
-  height: 400px;
-  overflow-y: auto;
-  margin-bottom: 20px;
-  padding: 10px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-}
-
-.message {
-  margin-bottom: 10px;
-  padding: 8px;
-  border-bottom: 1px solid #eee;
-}
-
-.input-area {
-  display: flex;
-  gap: 10px;
-}
-
-input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  padding: 8px 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-small {
-  color: #666;
-  margin-left: 10px;
-}
-</style>
