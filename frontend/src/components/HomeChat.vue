@@ -41,7 +41,7 @@ export default {
       }
     },
     async fetchHistory() {
-      const response = await fetch('http://localhost:8080/messages')
+      const response = await fetch('http://localhost:8081/messages')
       this.messages = await response.json()
       this.scrollToBottom()
     },
