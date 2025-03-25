@@ -36,7 +36,6 @@ func main() {
     }
     defer db.Close()
 
-    // Create messages table if not exists
     _, err = db.Exec(`CREATE TABLE IF NOT EXISTS messages (
         id INT PRIMARY KEY AUTO_INCREMENT,
         content TEXT,
@@ -81,14 +80,12 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 func handleMessages(db *sql.DB) {
     for {
         msg := <-broadcast
-        // Store message in database
         _, err := db.Exec("INSERT INTO messages (content, sender, sent_at) VALUES (?, ?, ?)",
             msg.Content, msg.Sender, msg.SentAt)
         if err != nil {
             log.Printf("Database error: %v", err)
         }
 
-        // Broadcast to all clients
         for client := range clients {
             err := client.WriteJSON(msg)
             if err != nil {
