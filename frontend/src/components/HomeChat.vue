@@ -75,6 +75,7 @@ export default {
       } catch (error) {
         console.error('Failed to fetch history:', error)
       }
+
     },
     sendMessage() {
       if (this.newMessage.trim()) {
@@ -96,3 +97,4 @@ export default {
   }
 }
 </script>
+
