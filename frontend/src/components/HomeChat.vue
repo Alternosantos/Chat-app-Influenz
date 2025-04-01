@@ -78,17 +78,32 @@ export default {
       }
     },
     async fetchHistory() {
-      try {
-        const response = await fetch('http://localhost:8080/messages')
-        this.messages = await response.json().map(msg => ({
-          ...msg,
-          sent: msg.sender === this.sender
-        }))
-        this.scrollToBottom()
-      } catch (error) {
-        console.error('Failed to fetch history:', error)
-      }
-    },
+  try {
+    const response = await fetch('http://localhost:8080/messages');
+    
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error("Received non-JSON response");
+    }
+    
+    const data = await response.json();
+    this.messages = data.map(msg => ({
+      ...msg,
+      sent: msg.sender === this.sender
+    }));
+    this.scrollToBottom();
+  } catch (error) {
+    console.error('Failed to fetch history:', error);
+  
+    this.messages = []; 
+  }
+},
     sendMessage() {
       if (this.newMessage.trim()) {
         const message = {

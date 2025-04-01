@@ -29,7 +29,7 @@ func main() {
     router := mux.NewRouter()
 
     // Database connection
-    db, err := sql.Open("mysql", "Alberto:your_password@tcp(127.0.0.1:3306)/Chat_app_db")
+    db, err := sql.Open("mysql", "root:password@tcp(127.0.0.1:3306)/Chat_app_db")
     if err != nil {
         log.Fatal(err)
     }
