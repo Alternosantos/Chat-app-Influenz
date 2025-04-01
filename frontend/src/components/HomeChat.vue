@@ -1,14 +1,14 @@
 <style src="@/components/style.css"></style>
 <template>
+ <div class="main-container">
+  <h1 class="chat-title">Messages</h1>
   <div class="chat-wrapper">
-    <!-- Painel de Usuários -->
     <div class="users-container">
       <h2>Users</h2>
       <div class="search-bar">
         <input type="text" placeholder="Search users" v-model="searchQuery">
         <button>Search</button>
       </div>
-  <!--Lista de usuarios-->
       <div class="user-list">
         <div v-for="(user, index) in filteredUsers" :key="index" class="user-item" @click="selectUser(user)">
           <img :src="user.avatar" alt="User">
@@ -19,8 +19,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Painel de Mensagens -->
     <div class="messages-container">
       <h2>{{ selectedUser ? selectedUser.name : "Username" }}</h2>
       <div class="messages" ref="messages">
@@ -28,14 +26,13 @@
           {{ msg.content }}
         </div>
       </div>
-
-      <!-- Input de mensagem -->
       <div class="input-area">
         <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Placeholder text">
         <button @click="sendMessage">Send</button>
       </div>
     </div>
   </div>
+</div>
 </template>
 
 <script>
