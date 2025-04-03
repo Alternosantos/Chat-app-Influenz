@@ -27,14 +27,13 @@
         </div>
       </div>
       <div class="input-area">
-        <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Placeholder text">
-        <button @click="sendMessage">Send</button>
-      </div>
+  <textarea v-model="newMessage" @keyup.enter.exact="sendMessage" placeholder="Placeholder text"></textarea>
+  <button @click="sendMessage">Send</button>
+</div>
     </div>
   </div>
 </div>
 </template>
-
 <script>
 export default {
   data() {
@@ -43,12 +42,14 @@ export default {
       newMessage: '',
       messages: [],
       users: [
-        { name: 'Alberto', avatar: 'https://i.imgur.com/6VBx3io.png', lastMessage: 'this is a sample text that was ...' },
-        { name: 'Username', avatar: 'https://i.imgur.com/6VBx3io.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://i.imgur.com/6VBx3io.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://i.imgur.com/6VBx3io.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://i.imgur.com/6VBx3io.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://i.imgur.com/6VBx3io.png', lastMessage: 'this is the last sent text over here...' }
+        { name: 'Alberto', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is a sample text that was ...' },
+        { name: 'Gustavo', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' }
       ],
       selectedUser: null,
       ws: null,
@@ -111,17 +112,23 @@ export default {
           sender: this.sender,
           sent_at: new Date().toISOString(),
           sent: true
-        }
+        };
         this.ws.send(JSON.stringify(message))
         this.messages.push(message)
-        this.newMessage = ''
+        this.newMessage = '';
+        this.scrollToBottom(); 
+       
+
+        
       }
     },
     scrollToBottom() {
       this.$nextTick(() => {
         const container = this.$refs.messages
         if (container) {
-          container.scrollTop = container.scrollHeight
+          setTimeout(() => {  
+        container.scrollTop = container.scrollHeight;
+      }, );
         }
       })
     },
