@@ -20,16 +20,16 @@
       </div>
     </div>
     <div class="messages-container">
-      <h2>{{ selectedUser ? selectedUser.name : "Username" }}</h2>
+      <h2>{{ selectedUser ? selectedUser.name : "Select a user to start chatting" }}</h2>
       <div class="messages" ref="messages">
         <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.sent ? 'sent' : 'received']">
           {{ msg.content }}
         </div>
       </div>
-      <div class="input-area">
-  <textarea v-model="newMessage" @keyup.enter.exact="sendMessage" placeholder="Placeholder text"></textarea>
-  <button @click="sendMessage">Send</button>
-</div>
+      <div class="input-area" v-if="selectedUser">
+        <textarea v-model="newMessage" @keyup.enter.exact="sendMessage" placeholder="Type your message here"></textarea>
+        <button @click="sendMessage">Send</button>
+      </div>
     </div>
   </div>
 </div>
@@ -79,32 +79,29 @@ export default {
       }
     },
     async fetchHistory() {
-  try {
-    const response = await fetch('http://localhost:8080/messages');
-    
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error("Received non-JSON response");
-    }
-    
-    const data = await response.json();
-    this.messages = data.map(msg => ({
-      ...msg,
-      sent: msg.sender === this.sender
-    }));
-    this.scrollToBottom();
-  } catch (error) {
-    console.error('Failed to fetch history:', error);
-  
-    this.messages = []; 
-  }
-},
+      try {
+        const response = await fetch('http://localhost:8080/messages');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error("Received non-JSON response");
+        }
+        
+        const data = await response.json();
+        this.messages = data.map(msg => ({
+          ...msg,
+          sent: msg.sender === this.sender
+        }));
+        this.scrollToBottom();
+      } catch (error) {
+        console.error('Failed to fetch history:', error);
+        this.messages = []; 
+      }
+    },
     sendMessage() {
       if (this.newMessage.trim()) {
         const message = {
@@ -117,9 +114,6 @@ export default {
         this.messages.push(message)
         this.newMessage = '';
         this.scrollToBottom(); 
-       
-
-        
       }
     },
     scrollToBottom() {
@@ -127,39 +121,36 @@ export default {
         const container = this.$refs.messages
         if (container) {
           setTimeout(() => {  
-        container.scrollTop = container.scrollHeight;
-      }, );
+            container.scrollTop = container.scrollHeight;
+          }, );
         }
       })
     },
     selectUser(user) {
-  this.selectedUser = user;
-  this.messages = []; // Limpa mensagens antigas antes de carregar as novas
-  this.fetchUserMessages(user);
-},
+      this.selectedUser = user;
+      this.messages = [];
+      this.fetchUserMessages(user);
+    },
+    async fetchUserMessages(user) {
+      try {
+        const response = await fetch(`http://localhost:8080/messages?user=${user.name}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-async fetchUserMessages(user) {
-  try {
-    const response = await fetch(`http://localhost:8080/messages?user=${user.name}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        this.messages = data.map(msg => ({
+          ...msg,
+          sent: msg.sender === this.sender
+        }));
+
+        this.scrollToBottom();
+      } catch (error) {
+        console.error('Failed to fetch user messages:', error);
+        this.messages = [];
+      }
     }
-
-    const data = await response.json();
-    this.messages = data.map(msg => ({
-      ...msg,
-      sent: msg.sender === this.sender
-    }));
-
-    this.scrollToBottom();
-  } catch (error) {
-    console.error('Failed to fetch user messages:', error);
-    this.messages = [];
-  }
-}
-
   }
 }
 </script>
-
