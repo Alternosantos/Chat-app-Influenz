@@ -133,8 +133,32 @@ export default {
       })
     },
     selectUser(user) {
-      this.selectedUser = user
+  this.selectedUser = user;
+  this.messages = []; // Limpa mensagens antigas antes de carregar as novas
+  this.fetchUserMessages(user);
+},
+
+async fetchUserMessages(user) {
+  try {
+    const response = await fetch(`http://localhost:8080/messages?user=${user.name}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+    this.messages = data.map(msg => ({
+      ...msg,
+      sent: msg.sender === this.sender
+    }));
+
+    this.scrollToBottom();
+  } catch (error) {
+    console.error('Failed to fetch user messages:', error);
+    this.messages = [];
+  }
+}
+
   }
 }
 </script>
