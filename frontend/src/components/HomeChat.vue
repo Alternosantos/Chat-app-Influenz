@@ -24,6 +24,7 @@
           </div>
         </div>
       </div>
+
       <div class="messages-container">
         <h2>{{ selectedUser ? selectedUser.name : "Select a user" }}</h2>
         <div class="messages" ref="messages">
@@ -44,11 +45,11 @@
           />
           <button @click="sendMessage">Send</button>
         </div>
+
       </div>
     </div>
   </div>
 </template>
-
 <script>
 export default {
   data() {
@@ -56,7 +57,9 @@ export default {
       searchQuery: "",
       newMessage: "",
       messages: [],
+
       users: [],
+
       selectedUser: null,
       ws: null,
       sender: "user_" + Math.floor(Math.random() * 1000),
@@ -141,6 +144,7 @@ export default {
       };
     },
 
+
       async fetchHistory() {
         if (!this.selectedUser) return;
         try {
@@ -179,6 +183,7 @@ export default {
             this.ws.send(JSON.stringify(message));
           }
         }
+
       },
 
       updateLastMessage(message) {
@@ -190,8 +195,19 @@ export default {
             message.content.length > 20
               ? message.content.substring(0, 20) + "..."
               : message.content;
+      }
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const container = this.$refs.messages
+        if (container) {
+          setTimeout(() => {  
+            container.scrollTop = container.scrollHeight;
+          }, );
         }
       },
+
 
       scrollToBottom() {
         this.$nextTick(() => {
@@ -215,8 +231,10 @@ export default {
           minute: "2-digit",
         });
       },
+
     },
   };
 </script>
 
 <style src="@/components/style.css"></style>
+
