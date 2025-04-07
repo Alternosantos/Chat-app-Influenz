@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -17,17 +18,21 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-// Changed: now maps userID to connection
-var clients = make(map[string]*websocket.Conn)
+type Client struct {
+	Conn *websocket.Conn
+	Mu   sync.Mutex
+}
+
+var clients = make(map[string]*Client)
 var broadcast = make(chan Message)
 var db *sql.DB
 
 type Message struct {
-	Type      string `json:"type,omitempty"`
-	Content   string `json:"content,omitempty"`
-	Sender    string `json:"sender"`
-	Recipient string `json:"recipient,omitempty"`
-	SentAt    string `json:"sent_at,omitempty"`
+	Type      string    `json:"type,omitempty"`
+	Content   string    `json:"content,omitempty"`
+	Sender    string    `json:"sender"`
+	Recipient string    `json:"recipient,omitempty"`
+	SentAt    time.Time `json:"sent_at,omitempty"`
 }
 
 func main() {
@@ -75,6 +80,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Active clients: %v", clients)
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
@@ -92,8 +98,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save connection
-	clients[initMsg.UserID] = ws
+	clients[initMsg.UserID] = &Client{Conn: ws}
 	broadcastUserList()
 
 	defer func() {
@@ -109,30 +114,49 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Read error: %v", err)
 			break
 		}
-		msg.SentAt = time.Now().Format(time.RFC3339)
+		msg.SentAt = time.Now()
 		broadcast <- msg
 	}
 }
 
 func handleMessages() {
 	for msg := range broadcast {
-		if msg.Type == "message" {
-			_, err := db.Exec(
-				"INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
-				msg.Content, msg.Sender, msg.Recipient, msg.SentAt,
-			)
-			if err != nil {
-				log.Printf("Database error: %v", err)
-				continue
-			}
-		}
+        log.Printf("Received message: %+v", msg)
+		log.Printf("Processing message: %+v", msg)
 
-		// Send to recipient and sender if they're connected
-		if conn, ok := clients[msg.Recipient]; ok {
-			conn.WriteJSON(msg)
-		}
-		if conn, ok := clients[msg.Sender]; ok && msg.Recipient != msg.Sender {
-			conn.WriteJSON(msg)
+    for msg := range broadcast {
+        if msg.Type == "message" {
+            
+            _, err := db.Exec(
+                "INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
+                msg.Content, msg.Sender, msg.Recipient, msg.SentAt.Format("2006-01-02 15:04:05"),
+            )
+            if err != nil {
+                log.Printf("Database error: %v", err)
+                continue
+            }
+
+            
+            if recipientClient, ok := clients[msg.Recipient]; ok {
+                recipientClient.Mu.Lock()
+                err := recipientClient.Conn.WriteJSON(msg)
+                recipientClient.Mu.Unlock()
+                if err != nil {
+                    log.Printf("Error sending to recipient %s: %v", msg.Recipient, err)
+                }
+            }
+
+            
+            if senderClient, ok := clients[msg.Sender]; ok {
+                senderClient.Mu.Lock()
+                err := senderClient.Conn.WriteJSON(msg)
+                senderClient.Mu.Unlock()
+                if err != nil {
+                    log.Printf("Error sending to sender %s: %v", msg.Sender, err)
+                }
+            }
+        }
+ 
 		}
 	}
 }
@@ -148,25 +172,38 @@ func broadcastUserList() {
 		"users": userList,
 	}
 
-	for _, conn := range clients {
-		conn.WriteJSON(update)
+	for _, client := range clients {
+		client.Mu.Lock()
+		client.Conn.WriteJSON(update)
+		client.Mu.Unlock()
 	}
 }
 
 func getMessages(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	sender := r.URL.Query().Get("sender")
 	recipient := r.URL.Query().Get("recipient")
 
-	query := `
-		SELECT content, sender, recipient, sent_at 
-		FROM messages 
-		WHERE (sender = ? AND recipient = ?) OR (sender = ? AND recipient = ?)
-		ORDER BY sent_at ASC
-	`
+	if sender == "" || recipient == "" {
+		http.Error(w, "Missing sender or recipient", http.StatusBadRequest)
+		return
+	}
 
-	rows, err := db.Query(query, sender, recipient, recipient, sender)
+	rows, err := db.Query(`
+		SELECT sender, recipient, content, sent_at
+		FROM messages
+		WHERE (sender = ? AND recipient = ?)
+		   OR (sender = ? AND recipient = ?)
+		ORDER BY sent_at ASC
+	`, sender, recipient, recipient, sender)
+
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error querying messages: %v", err)
+		http.Error(w, "Error fetching messages", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -174,13 +211,15 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	var messages []Message
 	for rows.Next() {
 		var msg Message
-		if err := rows.Scan(&msg.Content, &msg.Sender, &msg.Recipient, &msg.SentAt); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if err := rows.Scan(&msg.Sender, &msg.Recipient, &msg.Content, &msg.SentAt); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			continue
 		}
 		messages = append(messages, msg)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(messages)
+	if err := json.NewEncoder(w).Encode(messages); err != nil {
+		log.Printf("Error encoding messages: %v", err)
+		http.Error(w, "Error encoding messages", http.StatusInternalServerError)
+	}
 }
