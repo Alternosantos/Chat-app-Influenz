@@ -80,6 +80,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Active clients: %v", clients)
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
@@ -120,26 +121,42 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 func handleMessages() {
 	for msg := range broadcast {
-		if msg.Type == "message" {
-			_, err := db.Exec(
-				"INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
-				msg.Content, msg.Sender, msg.Recipient, msg.SentAt.Format("2006-01-02 15:04:05"),
-			)
-			if err != nil {
-				log.Printf("Database error: %v", err)
-				continue
-			}
-		}
+        log.Printf("Received message: %+v", msg)
+		log.Printf("Processing message: %+v", msg)
 
-		if client, ok := clients[msg.Recipient]; ok {
-			client.Mu.Lock()
-			client.Conn.WriteJSON(msg)
-			client.Mu.Unlock()
-		}
-		if client, ok := clients[msg.Sender]; ok && msg.Recipient != msg.Sender {
-			client.Mu.Lock()
-			client.Conn.WriteJSON(msg)
-			client.Mu.Unlock()
+    for msg := range broadcast {
+        if msg.Type == "message" {
+            
+            _, err := db.Exec(
+                "INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
+                msg.Content, msg.Sender, msg.Recipient, msg.SentAt.Format("2006-01-02 15:04:05"),
+            )
+            if err != nil {
+                log.Printf("Database error: %v", err)
+                continue
+            }
+
+            
+            if recipientClient, ok := clients[msg.Recipient]; ok {
+                recipientClient.Mu.Lock()
+                err := recipientClient.Conn.WriteJSON(msg)
+                recipientClient.Mu.Unlock()
+                if err != nil {
+                    log.Printf("Error sending to recipient %s: %v", msg.Recipient, err)
+                }
+            }
+
+            
+            if senderClient, ok := clients[msg.Sender]; ok {
+                senderClient.Mu.Lock()
+                err := senderClient.Conn.WriteJSON(msg)
+                senderClient.Mu.Unlock()
+                if err != nil {
+                    log.Printf("Error sending to sender %s: %v", msg.Sender, err)
+                }
+            }
+        }
+ 
 		}
 	}
 }
