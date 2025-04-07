@@ -114,15 +114,23 @@ export default {
     },
 
     async fetchHistory() {
-      if (!this.selectedUser) return
-      try {
-        const res = await fetch(`http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`)
-        const data = await res.json()
-        this.messages = Array.isArray(data) ? data : []
-      } catch (err) {
-        console.error('Error fetching history:', err)
-      }
-    },
+  if (!this.selectedUser) return
+  try {
+    const res = await fetch(`http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`)
+
+    if (!res.ok) {
+      const text = await res.text()
+      console.error('Server error:', text)
+      return
+    }
+
+    const data = await res.json()
+    this.messages = Array.isArray(data) ? data : []
+  } catch (err) {
+    console.error('Error fetching history:', err)
+  }
+},
+
 
     sendMessage() {
       if (this.newMessage.trim() && this.selectedUser) {
@@ -133,8 +141,7 @@ export default {
           recipient: this.selectedUser.name,
           sent_at: new Date().toISOString()
         }
-
-        this.messages.push({ ...message })
+        
         this.updateLastMessage(message)
         this.newMessage = ''
         this.scrollToBottom()
