@@ -22,6 +22,7 @@
           </div>
         </div>
       </div>
+
       <div class="messages-container">
         <h2>{{ selectedUser ? selectedUser.name : "Select a user" }}</h2>
         <div class="messages" ref="messages">
@@ -36,11 +37,11 @@
           <input v-model="newMessage" @keyup.enter="sendMessage" placeholder="Type your message...">
           <button @click="sendMessage">Send</button>
         </div>
+
       </div>
     </div>
   </div>
 </template>
-
 <script>
 export default {
   data() {
@@ -48,7 +49,9 @@ export default {
       searchQuery: '',
       newMessage: '',
       messages: [],
+
       users: [],
+
       selectedUser: null,
       ws: null,
       sender: 'user_' + Math.floor(Math.random() * 1000)
@@ -114,6 +117,7 @@ export default {
     },
 
     async fetchHistory() {
+
       if (!this.selectedUser) return
       try {
         const res = await fetch(`http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`)
@@ -130,6 +134,7 @@ export default {
           type: 'message',
           content: this.newMessage,
           sender: this.sender,
+
           recipient: this.selectedUser.name,
           sent_at: new Date().toISOString()
         }
@@ -151,6 +156,7 @@ export default {
         user.lastMessage = message.content.length > 20
           ? message.content.substring(0, 20) + '...'
           : message.content
+
       }
     },
 
@@ -158,12 +164,15 @@ export default {
       this.$nextTick(() => {
         const container = this.$refs.messages
         if (container) {
-          container.scrollTop = container.scrollHeight
+          setTimeout(() => {  
+            container.scrollTop = container.scrollHeight;
+          }, );
         }
       })
     },
 
     selectUser(user) {
+
       this.selectedUser = user
       this.fetchHistory()
     },
@@ -176,10 +185,5 @@ export default {
   }
 }
 </script>
-
-
-
-
-
 
 <style src="@/components/style.css"></style>
