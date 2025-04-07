@@ -29,7 +29,7 @@
         <h2>{{ selectedUser ? selectedUser.name : "Select a user" }}</h2>
         <div class="messages" ref="messages">
           <div
-            v-for="(msg, index) in activeMessages"
+            v-for="(msg, index) in [...activeMessages].reverse()"
             :key="index"
             :class="['message', msg.sender === sender ? 'sent' : 'received']"
           >
@@ -37,15 +37,15 @@
             <span class="message-time">{{ formatTime(msg.sent_at) }}</span>
           </div>
         </div>
+
         <div class="input-area" v-if="selectedUser">
-          <input
+          <textarea
             v-model="newMessage"
-            @keyup.enter="sendMessage"
+            @keyup.enter.exact="sendMessage"
             placeholder="Type your message..."
-          />
+          ></textarea>
           <button @click="sendMessage">Send</button>
         </div>
-
       </div>
     </div>
   </div>
@@ -57,9 +57,7 @@ export default {
       searchQuery: "",
       newMessage: "",
       messages: [],
-
       users: [],
-
       selectedUser: null,
       ws: null,
       sender: "user_" + Math.floor(Math.random() * 1000),
@@ -92,7 +90,7 @@ export default {
       return filtered.sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
     },
   },
-  methods: { 
+  methods: {
     connectWebSocket() {
       this.ws = new WebSocket("ws://localhost:8080/ws");
 
@@ -126,7 +124,6 @@ export default {
             (message.recipient === this.selectedUser?.name &&
               message.sender === this.sender)
           ) {
-            
             this.messages = [...this.messages, message];
             this.updateLastMessage(message);
             this.scrollToBottom();
@@ -144,97 +141,82 @@ export default {
       };
     },
 
-
-      async fetchHistory() {
-        if (!this.selectedUser) return;
-        try {
-          const res = await fetch(
-            `http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
-          );
-
-          if (!res.ok) {
-            const text = await res.text();
-            console.error("Server error:", text);
-            return;
-          }
-
-          const data = await res.json();
-          this.messages = Array.isArray(data) ? data : [];
-        } catch (err) {
-          console.error("Error fetching history:", err);
-        }
-      },
-
-      sendMessage() {
-        if (this.newMessage.trim() && this.selectedUser) {
-          const message = {
-            type: "message",
-            content: this.newMessage,
-            sender: this.sender,
-            recipient: this.selectedUser.name,
-            sent_at: new Date().toISOString(),
-          };
-
-          this.updateLastMessage(message);
-          this.newMessage = "";
-          this.scrollToBottom();
-
-          if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(message));
-          }
-        }
-
-      },
-
-      updateLastMessage(message) {
-        const user = this.users.find(
-          (u) => u.name === message.sender || u.name === message.recipient
+    async fetchHistory() {
+      if (!this.selectedUser) return;
+      try {
+        const res = await fetch(
+          `http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
         );
-        if (user) {
-          user.lastMessage =
-            message.content.length > 20
-              ? message.content.substring(0, 20) + "..."
-              : message.content;
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Server error:", text);
+          return;
+        }
+
+        const data = await res.json();
+        this.messages = Array.isArray(data) ? data : [];
+      } catch (err) {
+        console.error("Error fetching history:", err);
+      }
+    },
+
+    sendMessage() {
+      if (this.newMessage.trim() && this.selectedUser) {
+        const message = {
+          type: "message",
+          content: this.newMessage,
+          sender: this.sender,
+          recipient: this.selectedUser.name,
+          sent_at: new Date().toISOString(),
+        };
+
+        this.updateLastMessage(message);
+        this.newMessage = "";
+        this.scrollToBottom();
+
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify(message));
+        }
+      }
+    },
+
+    updateLastMessage(message) {
+      const user = this.users.find(
+        (u) => u.name === message.sender || u.name === message.recipient
+      );
+      if (user) {
+        user.lastMessage =
+          message.content.length > 20
+            ? message.content.substring(0, 20) + "..."
+            : message.content;
       }
     },
 
     scrollToBottom() {
       this.$nextTick(() => {
-        const container = this.$refs.messages
+        const container = this.$refs.messages;
         if (container) {
-          setTimeout(() => {  
-            container.scrollTop = container.scrollHeight;
-          }, );
+          container.scrollTop = container.scrollHeight;
         }
-      },
-
-
-      scrollToBottom() {
-        this.$nextTick(() => {
-          const container = this.$refs.messages;
-          if (container) {
-            container.scrollTop = container.scrollHeight;
-          }
-        });
-      },
-
-      selectUser(user) {
-        this.selectedUser = user;
-        this.fetchHistory();
-      },
-
-      formatTime(timestamp) {
-        if (!timestamp) return "";
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      },
-
+      });
     },
-  };
+
+    selectUser(user) {
+      this.selectedUser = user;
+      this.fetchHistory();
+    },
+
+    formatTime(timestamp) {
+      if (!timestamp) return "";
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    },
+  },
+};
 </script>
 
 <style src="@/components/style.css"></style>
-
