@@ -14,8 +14,7 @@
             :key="index"
             class="user-item"
             @click="selectUser(user)"
-            :class="{ active: selectedUser && selectedUser.name === user.name }"
-          >
+            :class="{ active: selectedUser && selectedUser.name === user.name }">
             <img :src="user.avatar" alt="User" />
             <div>
               <strong>{{ user.name }}</strong>
@@ -57,7 +56,14 @@ export default {
       searchQuery: "",
       newMessage: "",
       messages: [],
-      users: [],
+      users: [ { name: 'Alberto', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is a sample text that was ...' },
+        { name: 'Gustavo', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' },
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' }, 
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' } ,
+        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' }        
+      ],
       selectedUser: null,
       ws: null,
       sender: "user_" + Math.floor(Math.random() * 1000),
