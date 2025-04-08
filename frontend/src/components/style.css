@@ -4,7 +4,6 @@
     box-sizing: border-box;
 }
 
-
 body {
     font-family: 'Poppins', sans-serif;
     background-color: #2E002F;
@@ -13,6 +12,8 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    overflow: hidden;
+    
 }
 
 .chat-title  {
@@ -22,6 +23,7 @@ body {
     margin-bottom: 50px ;
     color: white;
     padding: 5px;
+
 }
 
 .main-container {
@@ -30,12 +32,14 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
+    overflow-y: hidden;
+   
 }
 
 
 .chat-wrapper {
     display: flex;
-    width: 1200px;
+    width: 1150px;
     height: 525px;
     gap: 20px;
 }
@@ -50,6 +54,7 @@ body {
     flex-direction: column;
     height: 525px; 
     position: relative; 
+    
 }
 
 .search-bar {
@@ -87,9 +92,7 @@ body {
 
 
 .user-list {
-    flex-grow: 1;
     overflow-y: scroll;
-    margin-top: 5px;
     border-radius: 10px;
     max-height: 100%;
 }
@@ -104,21 +107,20 @@ body {
 .user-item {
     display: flex;
     align-items: center;
-    margin-right: 10px;  
     border-radius: 10px;
     cursor: pointer;
-    width: 345px;
+    width: 348px;
     font-size: 15px;
     background-color: #541438;
-    padding: 8px; 
+    padding: 6px; 
     margin-bottom: 10px;
-    margin-left: 10px;
+    margin-left: 4px;
     
     
 }
 
 .user-item:hover {
-    background: #9a3b9a;
+    background: #420026;
 }
 
 .user-item img {
@@ -129,14 +131,15 @@ body {
     object-fit: cover;
 }
 
-.user-item div {
-    flex: 1;
-}
+
 
 .user-item p {
     font-size: 13px;
     color: #e0e0e0;
-    margin-top: 3px;
+    margin-top: 3px; 
+    white-space: nowrap;      
+    overflow: hidden;          
+    text-overflow: ellipsis;   
 }
 
 
@@ -230,7 +233,7 @@ body {
     padding: 12px 20px;
     cursor: pointer;
     border-radius: 8px;
-    margin-left: 10px;
+    margin-left: 10px;  
     width: 100px;
     font-weight: bold;
 }
@@ -242,17 +245,172 @@ body {
 /* the scroll bar is still not working 100%,the bar decreases while I write messages and when adding contacts too, the bar does not have a fixed size */
 
 .messages::-webkit-scrollbar-thumb,
+.messages::-webkit-scrollbar,
 .input-area textarea::-webkit-scrollbar
 {   display: none;
 }
 
-.user-list::-webkit-scrollbar,
-.messages::-webkit-scrollbar {
+.user-list::-webkit-scrollbar {
     width: 3.5px; 
+}
+
+.user-list::-webkit-scrollbar-track {
+
+    margin-bottom: 10px;
+
+
 }
 
 .user-list::-webkit-scrollbar-thumb {
     background: #aeaeae;
     border-radius: 10px;
+    
+  
 }
 
+
+
+@media (min-width: 767px) and (max-width: 1500px) {
+    .main-container {
+      margin-top: 20px;
+      padding: 0 20px;
+    }
+  
+    .chat-wrapper {
+      width: 950px;
+      max-width: 1000px;
+      flex-direction: row;
+      height: 80vh;
+      min-height: 500px;
+      gap: 15px;
+      padding: 0 15px;
+    }
+  
+    .users-container,
+    .messages-container {
+      flex: 1;
+      height: 100%;
+      padding: 15px;
+      border-radius: 10px;
+    }
+  
+    .search-bar {
+      flex-direction: row;
+      margin-bottom: 15px;
+      gap: 10px;
+    }
+  
+    .search-bar input {
+      width: 70%;
+      font-size: 14px;
+      padding: 10px;
+    }
+  
+    .search-bar button {
+      width: 30%;
+      font-size: 14px;
+      padding: 10px;
+    }
+  
+    .user-item {
+      padding: 10px;
+      margin-bottom: 10px;
+      width: 400px;
+    }
+  
+    .user-item img {
+      width: 40px;
+      height: 40px;
+    }
+  
+    .chat-title {
+      font-size: 26px;
+      margin-bottom: 20px;
+    }
+  
+    .message {
+      font-size: 14px;
+      padding: 10px;
+      max-width: 80%;
+    }
+  
+    .input-area textarea {
+      min-height: 60px;
+      font-size: 14px;
+    }
+  
+    .input-area button {
+      font-size: 14px;
+      padding: 10px 15px;
+    }
+  }
+  
+  @media (max-width: 766px) {
+    .main-container {
+      padding: 0 12px;
+      margin-top: 15px;
+    }
+  
+    .chat-wrapper {
+      width: 100%;
+      flex-direction: column;
+      height: auto;
+      min-height: unset;
+      gap: 12px;
+      padding: 0;
+    }
+  
+    .users-container, 
+    .messages-container {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+    }
+  
+    .search-bar {
+      flex-direction: column;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+  
+    .search-bar input,
+    .search-bar button {
+      width: 100%;
+      font-size: 13px;
+      padding: 8px;
+    }
+  
+    .user-item {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+  
+    .user-item img {
+      width: 36px;
+      height: 36px;
+    }
+  
+    .chat-title {
+      font-size: 22px;
+      margin-bottom: 15px;
+    }
+  
+    .message {
+      font-size: 13px;
+      padding: 8px;
+      max-width: 90%;
+    }
+  
+    .input-area textarea {
+      min-height: 50px;
+      font-size: 13px;
+    }
+  
+    .input-area button {
+      font-size: 13px;
+      padding: 8px 12px;
+      width: 100%;
+      margin-top: 8px;
+    }
+  }
