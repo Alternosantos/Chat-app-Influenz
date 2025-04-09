@@ -42,13 +42,14 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS messages (
 		id INT PRIMARY KEY AUTO_INCREMENT,
 		content TEXT,
-		sender VARCHAR(255),
-		recipient VARCHAR(255),
-		sent_at DATETIME
+		sender_id INT,
+		recipient_id INT,
+		sent_at DATETIME,
+		FOREIGN KEY (sender_id) REFERENCES users(id),
+		FOREIGN KEY (recipient_id) REFERENCES users(id)
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -121,45 +122,35 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 func handleMessages() {
 	for msg := range broadcast {
-        log.Printf("Received message: %+v", msg)
-		log.Printf("Processing message: %+v", msg)
+		log.Printf("Received message: %+v", msg)
 
-    for msg := range broadcast {
-        if msg.Type == "message" {
-            
-            _, err := db.Exec(
-                "INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
-                msg.Content, msg.Sender, msg.Recipient, msg.SentAt.Format("2006-01-02 15:04:05"),
-            )
-            if err != nil {
-                log.Printf("Database error: %v", err)
-                continue
-            }
+		if msg.Type == "message" {
+			_, err := db.Exec(
+				"INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
+				msg.Content, msg.Sender, msg.Recipient, msg.SentAt.Format("2006-01-02 15:04:05"),
+			)
+			if err != nil {
+				log.Printf("Database error: %v", err)
+				continue
+			}
 
-            
-            if recipientClient, ok := clients[msg.Recipient]; ok {
-                recipientClient.Mu.Lock()
-                err := recipientClient.Conn.WriteJSON(msg)
-                recipientClient.Mu.Unlock()
-                if err != nil {
-                    log.Printf("Error sending to recipient %s: %v", msg.Recipient, err)
-                }
-            }
+			
+			if recipientClient, ok := clients[msg.Recipient]; ok {
+				recipientClient.Mu.Lock()
+				_ = recipientClient.Conn.WriteJSON(msg)
+				recipientClient.Mu.Unlock()
+			}
 
-            
-            if senderClient, ok := clients[msg.Sender]; ok {
-                senderClient.Mu.Lock()
-                err := senderClient.Conn.WriteJSON(msg)
-                senderClient.Mu.Unlock()
-                if err != nil {
-                    log.Printf("Error sending to sender %s: %v", msg.Sender, err)
-                }
-            }
-        }
- 
+			
+			if senderClient, ok := clients[msg.Sender]; ok {
+				senderClient.Mu.Lock()
+				_ = senderClient.Conn.WriteJSON(msg)
+				senderClient.Mu.Unlock()
+			}
 		}
 	}
 }
+
 
 func broadcastUserList() {
 	userList := []string{}
@@ -194,7 +185,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.Query(`
-		SELECT sender, recipient, content, sent_at
+		SELECT content, sender , recipient, sent_at
 		FROM messages
 		WHERE (sender = ? AND recipient = ?)
 		   OR (sender = ? AND recipient = ?)
