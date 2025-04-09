@@ -14,7 +14,8 @@
             :key="index"
             class="user-item"
             @click="selectUser(user)"
-            :class="{ active: selectedUser && selectedUser.name === user.name }">
+            :class="{ active: selectedUser && selectedUser.name === user.name }"
+          >
             <img :src="user.avatar" alt="User" />
             <div>
               <strong>{{ user.name }}</strong>
@@ -28,7 +29,7 @@
         <h2>{{ selectedUser ? selectedUser.name : "Select a user" }}</h2>
         <div class="messages" ref="messages">
           <div
-            v-for="(msg, index) in [...activeMessages].reverse()"
+            v-for="(msg, index) in activeMessages"
             :key="index"
             :class="['message', msg.sender === sender ? 'sent' : 'received']"
           >
@@ -49,6 +50,7 @@
     </div>
   </div>
 </template>
+
 <script>
 export default {
   data() {
@@ -56,14 +58,7 @@ export default {
       searchQuery: "",
       newMessage: "",
       messages: [],
-      users: [ { name: 'Alberto', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is a sample text that was ...' },
-        { name: 'Gustavo', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://cdn-icons-png.flaticon.com/512/147/147142.png', lastMessage: 'this is the last sent text over here...' },
-        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' }, 
-        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' } ,
-        { name: 'Username', avatar: 'https://cdn-icons-png.freepik.com/512/147/147137.png', lastMessage: 'this is the last sent text over here...' }        
-      ],
+      users: [],
       selectedUser: null,
       ws: null,
       sender: "user_" + Math.floor(Math.random() * 1000),
@@ -74,26 +69,20 @@ export default {
   },
   computed: {
     filteredUsers() {
-      return this.users.filter((user) =>
-        user.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
+      const q = this.searchQuery.toLowerCase();
+      return this.users.filter((u) => u.name.toLowerCase().includes(q));
     },
     activeMessages() {
-      if (!this.selectedUser) {
-        console.log("No user selected");
-        return [];
-      }
-
-      const filtered = this.messages.filter(
-        (msg) =>
-          (msg.sender === this.sender &&
-            msg.recipient === this.selectedUser.name) ||
-          (msg.recipient === this.sender &&
-            msg.sender === this.selectedUser.name)
-      );
-
-      console.log("Filtered messages:", filtered);
-      return filtered.sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
+      if (!this.selectedUser) return [];
+      return this.messages
+        .filter(
+          (msg) =>
+            (msg.sender === this.sender &&
+              msg.recipient === this.selectedUser.name) ||
+            (msg.recipient === this.sender &&
+              msg.sender === this.selectedUser.name)
+        )
+        .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
     },
   },
   methods: {
@@ -111,8 +100,8 @@ export default {
       };
 
       this.ws.onmessage = (event) => {
-        console.log("RAW WEBSOCKET MESSAGE:", event.data);
         const message = JSON.parse(event.data);
+        console.log("Received:", message);
 
         if (message.type === "activeUsers") {
           this.users = message.users
@@ -123,16 +112,20 @@ export default {
               lastMessage: "",
             }));
         } else {
-          console.log("PROCESSED MESSAGE:", message);
-          if (
-            (message.sender === this.selectedUser?.name &&
-              message.recipient === this.sender) ||
-            (message.recipient === this.selectedUser?.name &&
-              message.sender === this.sender)
-          ) {
-            this.messages = [...this.messages, message];
+          const exists = this.messages.some(
+            (m) =>
+              m.sent_at === message.sent_at && m.sender === message.sender
+          );
+
+          if (!exists) {
+            this.messages.push(message);
             this.updateLastMessage(message);
-            this.scrollToBottom();
+            if (
+              message.sender === this.selectedUser?.name ||
+              message.recipient === this.selectedUser?.name
+            ) {
+              this.scrollToBottom();
+            }
           }
         }
       };
@@ -155,15 +148,15 @@ export default {
         );
 
         if (!res.ok) {
-          const text = await res.text();
-          console.error("Server error:", text);
+          console.error("Server error:", await res.text());
           return;
         }
 
         const data = await res.json();
         this.messages = Array.isArray(data) ? data : [];
+        this.scrollToBottom();
       } catch (err) {
-        console.error("Error fetching history:", err);
+        console.error("Fetch error:", err);
       }
     },
 
@@ -177,9 +170,8 @@ export default {
           sent_at: new Date().toISOString(),
         };
 
-        this.updateLastMessage(message);
         this.newMessage = "";
-        this.scrollToBottom();
+        this.updateLastMessage(message);
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify(message));
@@ -201,10 +193,8 @@ export default {
 
     scrollToBottom() {
       this.$nextTick(() => {
-        const container = this.$refs.messages;
-        if (container) {
-          container.scrollTop = container.scrollHeight;
-        }
+        const el = this.$refs.messages;
+        if (el) el.scrollTop = el.scrollHeight;
       });
     },
 
@@ -215,8 +205,7 @@ export default {
 
     formatTime(timestamp) {
       if (!timestamp) return "";
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString([], {
+      return new Date(timestamp).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
       });
