@@ -16,7 +16,16 @@
             @click="selectUser(user)"
             :class="{ active: selectedUser && selectedUser.name === user.name }"
           >
-            <img :src="user.avatar" alt="User" />
+            <div class="avatar-wrapper">
+              <img :src="user.avatar" alt="User Avatar" />
+              <span
+                v-if="
+                  user.hasNewMessage &&
+                  (!selectedUser || selectedUser.name !== user.name)
+                "
+                class="notification-dot"
+              ></span>
+            </div>
             <div>
               <strong>{{ user.name }}</strong>
               <p>{{ user.lastMessage }}</p>
@@ -65,6 +74,7 @@ export default {
       messages: [],
       users: [],
       selectedUser: null,
+      newMessageUsers: [],
       ws: null,
       sender: userId,
     };
@@ -85,16 +95,17 @@ export default {
   mounted() {
     this.connectWebSocket();
   },
-
   watch: {
     selectedUser(newUser) {
       if (newUser && this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.fetchHistory();
+        this.newMessageUsers = this.newMessageUsers.filter(
+          (name) => name !== newUser.name
+        );
         localStorage.setItem("selectedUser", JSON.stringify(newUser));
       }
     },
   },
-
   beforeUnmount() {
     if (this.ws) {
       this.ws.close();
@@ -139,7 +150,6 @@ export default {
       };
 
       this.ws.onmessage = (event) => {
-        console.log("RAW WEBSOCKET MESSAGE:", event.data);
         const message = JSON.parse(event.data);
 
         if (message.type === "activeUsers") {
@@ -151,7 +161,6 @@ export default {
               lastMessage: "",
             }));
         } else {
-          console.log("PROCESSED MESSAGE:", message);
           const exists = this.messages.some(
             (m) => m.sent_at === message.sent_at && m.sender === message.sender
           );
@@ -159,6 +168,14 @@ export default {
           if (!exists) {
             this.messages.push(message);
             this.updateLastMessage(message);
+
+            const isCurrent = this.selectedUser?.name === message.sender;
+            if (!isCurrent && message.recipient === this.sender) {
+              if (!this.newMessageUsers.includes(message.sender)) {
+                this.newMessageUsers.push(message.sender);
+              }
+            }
+
             if (
               message.sender === this.selectedUser?.name ||
               message.recipient === this.selectedUser?.name
@@ -233,6 +250,13 @@ export default {
           message.content.length > 20
             ? message.content.substring(0, 20) + "..."
             : message.content;
+
+        if (
+          message.sender !== this.sender &&
+          (!this.selectedUser || this.selectedUser.name !== message.sender)
+        ) {
+          user.hasNewMessage = true;
+        }
       }
     },
 
@@ -244,7 +268,11 @@ export default {
     },
 
     selectUser(user) {
+      user.hasNewMessage = false;
       this.selectedUser = user;
+      this.newMessageUsers = this.newMessageUsers.filter(
+        (name) => name !== user.name
+      );
       this.fetchHistory();
     },
 
