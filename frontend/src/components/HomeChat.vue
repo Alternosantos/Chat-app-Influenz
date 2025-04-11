@@ -61,11 +61,22 @@ export default {
       users: [],
       selectedUser: null,
       ws: null,
-      sender: "user_" + Math.floor(Math.random() * 1000),
+      sender:
+        localStorage.getItem("user_id") ||
+        (() => {
+          const id = "user_" + Math.floor(Math.random() * 1000);
+          localStorage.setItem("user_id", id);
+          return id;
+        })(),
     };
   },
   mounted() {
     this.connectWebSocket();
+  },
+  beforeUnmount() {
+    if (this.ws) {
+      this.ws.close();
+    }
   },
   computed: {
     filteredUsers() {
@@ -87,7 +98,12 @@ export default {
   },
   methods: {
     connectWebSocket() {
-      this.ws = new WebSocket("ws://localhost:8080/ws");
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const host = process.env.NODE_ENV === "production" 
+        ? window.location.host 
+        : "localhost:8080";
+      
+        this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
 
       this.ws.onopen = () => {
         console.log("WebSocket connected");
@@ -100,8 +116,8 @@ export default {
       };
 
       this.ws.onmessage = (event) => {
+        console.log("RAW WEBSOCKET MESSAGE:", event.data);
         const message = JSON.parse(event.data);
-        console.log("Received:", message);
 
         if (message.type === "activeUsers") {
           this.users = message.users
@@ -112,9 +128,9 @@ export default {
               lastMessage: "",
             }));
         } else {
+          console.log("PROCESSED MESSAGE:", message);
           const exists = this.messages.some(
-            (m) =>
-              m.sent_at === message.sent_at && m.sender === message.sender
+            (m) => m.sent_at === message.sent_at && m.sender === message.sender
           );
 
           if (!exists) {
@@ -143,8 +159,13 @@ export default {
     async fetchHistory() {
       if (!this.selectedUser) return;
       try {
+        const protocol = window.location.protocol;
+        const host = process.env.NODE_ENV === "production" 
+          ? window.location.host 
+          : "localhost:8080";
+        
         const res = await fetch(
-          `http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
+          `${protocol}//${host}/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
         );
 
         if (!res.ok) {
