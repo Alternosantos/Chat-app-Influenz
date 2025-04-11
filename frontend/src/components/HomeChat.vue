@@ -54,6 +54,11 @@
 <script>
 export default {
   data() {
+    let userId = localStorage.getItem("user_id");
+    if (!userId) {
+      userId = "user_" + Math.floor(Math.random() * 1000);
+      localStorage.setItem("user_id", userId);
+    }
     return {
       searchQuery: "",
       newMessage: "",
@@ -61,18 +66,35 @@ export default {
       users: [],
       selectedUser: null,
       ws: null,
-      sender:
-        localStorage.getItem("user_id") ||
-        (() => {
-          const id = "user_" + Math.floor(Math.random() * 1000);
-          localStorage.setItem("user_id", id);
-          return id;
-        })(),
+      sender: userId,
     };
+  },
+  created() {
+    const savedUser = localStorage.getItem("selectedUser");
+    if (savedUser) {
+      try {
+        this.selectedUser = JSON.parse(savedUser);
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.fetchHistory();
+        }
+      } catch (e) {
+        console.error("Failed to parse saved user", e);
+      }
+    }
   },
   mounted() {
     this.connectWebSocket();
   },
+
+  watch: {
+    selectedUser(newUser) {
+      if (newUser && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.fetchHistory();
+        localStorage.setItem("selectedUser", JSON.stringify(newUser));
+      }
+    },
+  },
+
   beforeUnmount() {
     if (this.ws) {
       this.ws.close();
@@ -99,11 +121,12 @@ export default {
   methods: {
     connectWebSocket() {
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const host = process.env.NODE_ENV === "production" 
-        ? window.location.host 
-        : "localhost:8080";
-      
-        this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
+      const host =
+        process.env.NODE_ENV === "production"
+          ? window.location.host
+          : "localhost:8080";
+
+      this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
 
       this.ws.onopen = () => {
         console.log("WebSocket connected");
@@ -160,10 +183,11 @@ export default {
       if (!this.selectedUser) return;
       try {
         const protocol = window.location.protocol;
-        const host = process.env.NODE_ENV === "production" 
-          ? window.location.host 
-          : "localhost:8080";
-        
+        const host =
+          process.env.NODE_ENV === "production"
+            ? window.location.host
+            : "localhost:8080";
+
         const res = await fetch(
           `${protocol}//${host}/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
         );
