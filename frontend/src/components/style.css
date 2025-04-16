@@ -414,6 +414,166 @@ body {
       margin-top: 8px;
     }
   }
+  @media (max-width: 935px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        padding: 15px 10px;
+        overflow-y: auto;
+    }
+    
+    .main-container {
+        margin-top: 10px;
+        padding: 0;
+        width: 100%;
+    }
+    
+    .chat-title {
+        font-size: 20px;
+        margin-bottom: 15px;
+        padding: 0;
+    }
+    
+    .chat-wrapper {
+        width: 100%;
+        flex-direction: column;
+        height: auto;
+        gap: 15px;
+    }
+    
+    .users-container,
+    .messages-container {
+        width: 100%;
+        height: auto;
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    .users-container {
+        order: 2;
+        max-height: 300px;
+    }
+    
+    .messages-container {
+        order: 1;
+        min-height: 400px;
+    }
+    
+    .search-bar {
+        flex-direction: row;
+        margin-bottom: 12px;
+        gap: 8px;
+    }
+    
+    .search-bar input {
+        width: 70%;
+        font-size: 12px;
+        padding: 8px;
+    }
+    
+    .search-bar button {
+        width: 30%;
+        font-size: 12px;
+        padding: 8px;
+        margin-left: 0;
+    }
+    
+    .user-list {
+        max-height: 200px;
+        padding-right: 8px; /* ou ajuste a gosto */
+      
+    }
+    
+    .user-item {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 8px;
+        margin-left: 0;
+    }
+    
+    .user-item img {
+        width: 36px;
+        height: 36px;
+        margin-right: 8px;
+    }
+    
+    .messages {
+        min-height: 300px;
+        padding: 10px;
+    }
+    
+    .message {
+        font-size: 12px;
+        padding: 8px 10px;
+        max-width: 85%;
+    }
+    
+    .input-area {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .input-area textarea {
+        width: 100%;
+        min-height: 60px;
+        font-size: 13px;
+        padding: 8px;
+    }
+    
+    .input-area button {
+        width: 100%;
+        margin-left: 0;
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+ 
+    .user-list::-webkit-scrollbar {
+        width: 3px;
+    }
+}
+
+/* for mobile*/
+@media (max-width: 400px) {
+    .chat-title {
+        font-size: 18px;
+    }
+    
+    .users-container,
+    .messages-container {
+        padding: 10px;
+    }
+    
+    .user-item {
+        padding: 6px;
+        font-size: 12px;
+    }
+    
+    .user-item img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .message {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+    
+    .input-area textarea {
+        font-size: 12px;
+    }
+    
+    .input-area button {
+        font-size: 13px;
+    }
+
+    .user-list::-webkit-scrollbar {
+        margin-left: 10px;
+        width: 2px;
+    }
+    
+   
+}
   
   .avatar-wrapper {
     position: relative;
