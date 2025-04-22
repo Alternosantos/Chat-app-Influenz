@@ -283,6 +283,8 @@ body {
       margin-top: 20px;
       padding: 0 20px;
       overflow: hidden; 
+      height: 80vh; /* Altura relativa à viewport */
+      min-height: 500px; /* Altura mínima */
     }
   
     .chat-wrapper {
@@ -301,6 +303,8 @@ body {
       height: 100%;
       padding: 15px;
       border-radius: 10px;
+      height: 100%; 
+      width: 50%;
     }
   
     .search-bar {
@@ -355,34 +359,24 @@ body {
   }
   
  
-  /* */
   @media (max-width: 935px) {
-
     .messages::-webkit-scrollbar-thumb,
-.messages::-webkit-scrollbar,
-.input-area textarea::-webkit-scrollbar {  
-    display: none;
-}
+    .messages::-webkit-scrollbar,
+    .input-area textarea::-webkit-scrollbar {  
+        display: none;
+    }
 
     body {
         height: auto;
         min-height: 100vh;
         padding: 15px 10px;
         overflow-y: auto;
-        overflow: hidden; 
     }
-    
-    .users-container:not([v-show]) + .messages-container {
-        width: 100% !important;
-        margin-left: 0;
-    }
-    
     
     .main-container {
         margin-top: 10px;
         padding: 0;
         width: 100%;
-        overflow: hidden; 
     }
     
     .chat-title {
@@ -398,21 +392,23 @@ body {
         gap: 15px;
     }
     
-    .users-container,
+   
+    .users-container {
+        width: 100%;
+        min-width: 350px; 
+        height: auto;
+        padding: 15px;
+        border-radius: 8px;
+        order: 2;
+        max-height: 400px; 
+    }
+    
+    
     .messages-container {
         width: 100%;
         height: auto;
-        padding: 12px;
+        padding: 15px;
         border-radius: 8px;
-        
-    }
-    
-    .users-container {
-        order: 2;
-        max-height: 300px;
-    }
-    
-    .messages-container {
         order: 1;
         min-height: 400px;
     }
@@ -425,73 +421,85 @@ body {
     
     .search-bar input {
         width: 70%;
-        font-size: 12px;
-        padding: 8px;
+        font-size: 14px; 
+        padding: 10px; 
     }
     
     .search-bar button {
         width: 30%;
-        font-size: 12px;
-        padding: 8px;
+        font-size: 14px;
+        padding: 10px;
         margin-left: 0;
     }
     
     .user-list {
-        max-height: 200px;
-        padding-right: 8px; 
-        overflow-y: auto;   
-        width: 100%; 
-      
+        max-height: 300px; 
+        padding-right: 8px;
+        overflow-y: auto;
+        width: 100%;
     }
     
     .user-item {
         width: 100%;
-        padding: 8px;
-        margin-bottom: 8px;
-        margin-left: 0;
+        padding: 10px; 
+        margin-bottom: 10px;
     }
     
     .user-item img {
-        width: 36px;
-        height: 36px;
-        margin-right: 8px;
+        width: 40px; 
+        height: 40px;
+        margin-right: 10px;
     }
     
     .messages {
-        height: 300px; 
-        padding: 10px;
-        overflow-y: auto; 
+        height: 350px; 
+        padding: 15px; 
     }
+    
     .message {
-        font-size: 12px;
-        padding: 8px 10px;
+        font-size: 14px; 
+        padding: 10px 12px; 
         max-width: 85%;
     }
     
     .input-area {
-        flex-direction: column;
-        gap: 8px;
+        flex-direction: row; 
+        gap: 10px;
     }
     
     .input-area textarea {
-        width: 100%;
+        font-size: 14px;
+        padding: 12px;
         min-height: 60px;
-        font-size: 13px;
-        padding: 8px;
     }
     
     .input-area button {
-        width: 100%;
-        margin-left: 0;
-        padding: 10px;
-        font-size: 14px;
+        width: auto;
+        padding: 0 20px;
+    }
+
+ 
+    .users-container.collapsed {
+        width: 0;
+        min-width: 0;
+        padding: 0;
+        margin: 0;
     }
     
- 
-    .user-list::-webkit-scrollbar {
-        width: 3px;
+    .users-container.collapsed + .messages-container {
+        width: 100%;
+    }
+    
+  
+    .toggle-users-btn {
+        top: 15px;
+        left: 15px;
+        background-color: #541438;
+        border: 2px solid #000;
+        z-index: 100;
     }
 }
+  
 
 
 
@@ -535,7 +543,7 @@ body {
     color: rgba(0, 0, 0, 0.6);
   }
 
-  
+
  /* collapse*/
   .toggle-users-btn {
     position: absolute;
@@ -594,4 +602,8 @@ body {
     border: 0;
     position: absolute;
     visibility: hidden;
+}
+.users-container, .messages-container {
+    height: 100%; 
+    transition: all 0.3s ease;
 }
