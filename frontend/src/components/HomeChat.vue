@@ -1,8 +1,15 @@
 <template>
   <div class="main-container">
     <h1 class="chat-title">Messages</h1>
+    <button 
+    @click="toggleUsers" 
+    class="toggle-users-btn" 
+    :class="{ collapsed: !showUsers }"
+    :title="showUsers ? 'Hide users' : 'Show users'"
+>
+</button>
     <div class="chat-wrapper">
-      <div class="users-container">
+      <div class="users-container" v-show="showUsers">
         <h2>Users</h2>
         <div class="search-bar">
           <input type="text" placeholder="Search users" v-model="searchQuery" />
@@ -77,6 +84,7 @@ export default {
       newMessageUsers: [],
       ws: null,
       sender: userId,
+      showUsers: true,
     };
   },
   created() {
@@ -130,6 +138,14 @@ export default {
     },
   },
   methods: {
+
+    toggleUsers() {
+    this.showUsers = !this.showUsers;
+
+    if (window.innerWidth <= 768) {
+            document.body.style.overflow = this.showUsers ? 'hidden' : 'auto';
+        }
+  },
     connectWebSocket() {
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
       const host =
@@ -148,6 +164,8 @@ export default {
           })
         );
       };
+
+      
 
       this.ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
@@ -277,12 +295,34 @@ export default {
     },
 
     formatTime(timestamp) {
-      if (!timestamp) return "";
-      return new Date(timestamp).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    },
+  if (!timestamp) return "";
+  
+  const now = new Date();
+  const msgDate = new Date(timestamp);
+  const diffDays = Math.floor((now - msgDate) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+ 
+    return msgDate.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } else if (diffDays === 1) {
+   
+    return "Ontem";
+  } else if (diffDays < 7) {
+    
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[msgDate.getDay()];
+  } else {
+    
+    return msgDate.toLocaleDateString([], {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    });
+  }
+}
   },
 };
 </script>
