@@ -33,7 +33,8 @@ body {
     align-items: center;
     width: 100%;
     overflow-y: hidden;
-   
+    min-height: 0;  
+    max-height: 100%; 
 }
 
 
@@ -42,8 +43,8 @@ body {
     width: 1150px;
     height: 525px;
     gap: 20px;
+    position: relative; 
 }
-
 
 .users-container {
     width: 35%;
@@ -104,6 +105,12 @@ body {
     width: 100%;
 }
 
+.users-container:not([v-show]) + .messages-container {
+    width: 100% !important;
+    margin-left: 0;
+}
+
+
 .user-item {
     display: flex;
     align-items: center;
@@ -144,16 +151,17 @@ body {
 
 
 .messages-container {
-    width: 65%;
+    flex: 1; 
     background: #711D58;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
     padding: 20px;
-    height: 525px; 
-    position: relative; 
+    height: 525px;
+    position: relative;
     padding-bottom: 10px;
-    
+    transition: width 0.3s ease; 
+    overflow-y: auto; 
 }
 
 .messages-container h2{
@@ -162,7 +170,7 @@ body {
 
 
 .messages {
-    flex: 1; 
+    flex: 1;
     overflow-y: auto;
     background: #541438;
     border-radius: 8px;
@@ -170,11 +178,11 @@ body {
     margin: 10px 0;
     display: flex;
     flex-direction: column;
-    min-height: 0; 
-    height: 100%;
-    -ms-overflow-style: none;
+    min-height: 0;
+    max-height: 100%;
     
 }
+
 
 
 .message {
@@ -242,7 +250,7 @@ body {
     background: #9a3b9a;
 }
  
-/* the scroll bar is still not working 100%,the bar decreases while I write messages and when adding contacts too, the bar does not have a fixed size */
+
 
 .messages::-webkit-scrollbar-thumb,
 .messages::-webkit-scrollbar,
@@ -270,10 +278,11 @@ body {
 
 
 
-@media (min-width: 767px) and (max-width: 1500px) {
+@media (min-width: 466px) and (max-width: 1500px) {
     .main-container {
       margin-top: 20px;
       padding: 0 20px;
+      overflow: hidden; 
     }
   
     .chat-wrapper {
@@ -345,87 +354,35 @@ body {
     }
   }
   
-  @media (max-width: 766px) {
-    .main-container {
-      padding: 0 12px;
-      margin-top: 15px;
-    }
-  
-    .chat-wrapper {
-      width: 100%;
-      flex-direction: column;
-      height: auto;
-      min-height: unset;
-      gap: 12px;
-      padding: 0;
-    }
-  
-    .users-container, 
-    .messages-container {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-    }
-  
-    .search-bar {
-      flex-direction: column;
-      margin-bottom: 12px;
-      gap: 8px;
-    }
-  
-    .search-bar input,
-    .search-bar button {
-      width: 100%;
-      font-size: 13px;
-      padding: 8px;
-    }
-  
-    .user-item {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 8px;
-    }
-  
-    .user-item img {
-      width: 36px;
-      height: 36px;
-    }
-  
-    .chat-title {
-      font-size: 22px;
-      margin-bottom: 15px;
-    }
-  
-    .message {
-      font-size: 13px;
-      padding: 8px;
-      max-width: 90%;
-    }
-  
-    .input-area textarea {
-      min-height: 50px;
-      font-size: 13px;
-    }
-  
-    .input-area button {
-      font-size: 13px;
-      padding: 8px 12px;
-      width: 100%;
-      margin-top: 8px;
-    }
-  }
+ 
+  /* */
   @media (max-width: 935px) {
+
+    .messages::-webkit-scrollbar-thumb,
+.messages::-webkit-scrollbar,
+.input-area textarea::-webkit-scrollbar {  
+    display: none;
+}
+
     body {
         height: auto;
         min-height: 100vh;
         padding: 15px 10px;
         overflow-y: auto;
+        overflow: hidden; 
     }
+    
+    .users-container:not([v-show]) + .messages-container {
+        width: 100% !important;
+        margin-left: 0;
+    }
+    
     
     .main-container {
         margin-top: 10px;
         padding: 0;
         width: 100%;
+        overflow: hidden; 
     }
     
     .chat-title {
@@ -447,6 +404,7 @@ body {
         height: auto;
         padding: 12px;
         border-radius: 8px;
+        
     }
     
     .users-container {
@@ -480,7 +438,9 @@ body {
     
     .user-list {
         max-height: 200px;
-        padding-right: 8px; /* ou ajuste a gosto */
+        padding-right: 8px; 
+        overflow-y: auto;   
+        width: 100%; 
       
     }
     
@@ -498,10 +458,10 @@ body {
     }
     
     .messages {
-        min-height: 300px;
+        height: 300px; 
         padding: 10px;
+        overflow-y: auto; 
     }
-    
     .message {
         font-size: 12px;
         padding: 8px 10px;
@@ -533,47 +493,8 @@ body {
     }
 }
 
-/* for mobile*/
-@media (max-width: 400px) {
-    .chat-title {
-        font-size: 18px;
-    }
-    
-    .users-container,
-    .messages-container {
-        padding: 10px;
-    }
-    
-    .user-item {
-        padding: 6px;
-        font-size: 12px;
-    }
-    
-    .user-item img {
-        width: 32px;
-        height: 32px;
-    }
-    
-    .message {
-        font-size: 11px;
-        padding: 6px 8px;
-    }
-    
-    .input-area textarea {
-        font-size: 12px;
-    }
-    
-    .input-area button {
-        font-size: 13px;
-    }
 
-    .user-list::-webkit-scrollbar {
-        margin-left: 10px;
-        width: 2px;
-    }
-    
-   
-}
+
   
   .avatar-wrapper {
     position: relative;
@@ -602,4 +523,75 @@ body {
     z-index: 2;
   }
   
+  .message-time {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 8px;
+    align-self: flex-end;
+    white-space: nowrap;
+  }
   
+  .sent .message-time {
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  
+ /* collapse*/
+  .toggle-users-btn {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    background-color: transparent;
+    color: white;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 0 8px 8px 0;
+    transition: all 0.3s ease;
+    width: 30px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-users-btn:hover {
+    background-color: rgba(84, 20, 56, 0.7);
+}
+
+
+.toggle-users-btn::after {
+    content: "❮";
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.toggle-users-btn.collapsed::after {
+    content: "❯";
+    transform: rotate(180deg);
+}
+.users-container {
+    width: 35%;
+    background: #711D58;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 525px;
+    position: relative;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.users-container.collapsed {
+    transform: translateX(-100%);
+    opacity: 0;
+    width: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    position: absolute;
+    visibility: hidden;
+}
