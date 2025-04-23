@@ -1,13 +1,12 @@
 <template>
   <div class="main-container">
     <h1 class="chat-title">Messages</h1>
-    <button 
-    @click="toggleUsers" 
-    class="toggle-users-btn" 
-    :class="{ collapsed: !showUsers }"
-    :title="showUsers ? 'Hide users' : 'Show users'"
->
-</button>
+    <button
+      @click="toggleUsers"
+      class="toggle-users-btn"
+      :class="{ collapsed: !showUsers }"
+      :title="showUsers ? 'Hide users' : 'Show users'"
+    ></button>
     <div class="chat-wrapper">
       <div class="users-container" v-show="showUsers">
         <h2>Users</h2>
@@ -69,17 +68,21 @@
 
 <script>
 export default {
+  name: "ChatComponent",
   data() {
     let userId = localStorage.getItem("user_id");
-    if (!userId) {
-      userId = "user_" + Math.floor(Math.random() * 1000);
-      localStorage.setItem("user_id", userId);
+    let userName = localStorage.getItem("user_name");
+
+    if (!userId || !userName) {
+      window.location.href = "/";
     }
+
     return {
       searchQuery: "",
       newMessage: "",
       messages: [],
       users: [],
+      senderName: userName,
       selectedUser: null,
       newMessageUsers: [],
       ws: null,
@@ -138,14 +141,13 @@ export default {
     },
   },
   methods: {
-
     toggleUsers() {
-    this.showUsers = !this.showUsers;
+      this.showUsers = !this.showUsers;
 
-    if (window.innerWidth <= 768) {
-            document.body.style.overflow = this.showUsers ? 'hidden' : 'auto';
-        }
-  },
+      if (window.innerWidth <= 768) {
+        document.body.style.overflow = this.showUsers ? "hidden" : "auto";
+      }
+    },
     connectWebSocket() {
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
       const host =
@@ -164,8 +166,6 @@ export default {
           })
         );
       };
-
-      
 
       this.ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
@@ -295,34 +295,38 @@ export default {
     },
 
     formatTime(timestamp) {
-  if (!timestamp) return "";
-  
-  const now = new Date();
-  const msgDate = new Date(timestamp);
-  const diffDays = Math.floor((now - msgDate) / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 0) {
- 
-    return msgDate.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } else if (diffDays === 1) {
-   
-    return "Ontem";
-  } else if (diffDays < 7) {
-    
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[msgDate.getDay()];
-  } else {
-    
-    return msgDate.toLocaleDateString([], {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit'
-    });
-  }
-}
+      if (!timestamp) return "";
+
+      const now = new Date();
+      const msgDate = new Date(timestamp);
+      const diffDays = Math.floor((now - msgDate) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        return msgDate.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } else if (diffDays === 1) {
+        return "Ontem";
+      } else if (diffDays < 7) {
+        const days = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+        return days[msgDate.getDay()];
+      } else {
+        return msgDate.toLocaleDateString([], {
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+        });
+      }
+    },
   },
 };
 </script>
