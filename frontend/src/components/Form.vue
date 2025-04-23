@@ -1,0 +1,48 @@
+<template>
+    <div class="form-container">
+      <h1>Login</h1>
+      <form @submit.prevent="submitForm">
+        <input v-model="id" type="text" placeholder="Enter your ID" required />
+        <input v-model="name" type="text" placeholder="Enter your name" required />
+        <button type="submit">Enter Chat</button>
+      </form>
+    </div>
+  </template>
+  
+  <script>
+  export default {
+    name: "FormComponent",
+    data() {
+      return {
+        id: '',
+        name: '',
+      };
+    },
+    methods: {
+      submitForm() {
+        localStorage.setItem("user_id", this.id);
+        localStorage.setItem("user_name", this.name);
+        this.$router.push("/chat");
+      },
+    },
+  };
+  </script>
+  
+  <style scoped>
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 100px;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  input, button {
+    padding: 10px;
+    font-size: 16px;
+  }
+  </style>
+  

@@ -1,13 +1,15 @@
-import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router'
-import HomeChat from '../components/HomeChat.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import FormComponent from '../components/Form.vue';
+import ChatComponent from '../components/Chat.vue';
 
-const routes: RouteRecordRaw[] = [
-  { path: '/', name: 'Home', component: HomeChat},
-]
+const routes = [
+  { path: '/', component: FormComponent },
+  { path: '/chat', component: ChatComponent },
+];
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes
+  history: createWebHistory(),
+  routes,
 });
 
-export default router
+export default router;
