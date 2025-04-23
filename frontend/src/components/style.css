@@ -305,6 +305,7 @@ body {
       border-radius: 10px;
       height: 100%; 
       width: 50%;
+     
     }
   
     .search-bar {
@@ -398,9 +399,9 @@ body {
         min-width: 350px; 
         height: auto;
         padding: 15px;
-        border-radius: 8px;
         order: 2;
         max-height: 400px; 
+        border-radius: 10px;
     }
     
     
@@ -571,14 +572,16 @@ body {
 
 
 .toggle-users-btn::after {
-    content: "❮";
+    content: "<";
     font-size: 14px;
     transition: all 0.3s ease;
+    font: bold;
 }
 
 .toggle-users-btn.collapsed::after {
-    content: "❯";
+    content: ">";
     transform: rotate(180deg);
+    font: bold;
 }
 .users-container {
     width: 35%;
@@ -606,4 +609,5 @@ body {
 .users-container, .messages-container {
     height: 100%; 
     transition: all 0.3s ease;
+    border-radius: 10px;
 }
