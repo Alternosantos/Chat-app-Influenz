@@ -19,14 +19,28 @@
       };
     },
     methods: {
-      submitForm() {
-        localStorage.setItem("user_id", this.id);
-        localStorage.setItem("user_name", this.name);
-        this.$router.push("/chat");
-      },
+    submitForm() {
+      localStorage.setItem("user_id", this.id);
+      localStorage.setItem("user_name", this.name);
+
+      // Conectar ao WebSocket com o id e nome
+      const ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
+      
+      ws.onopen = () => {
+        ws.send(
+          JSON.stringify({
+            type: "init",
+            userID: this.id,
+            userName: this.name,
+          })
+        );
+      };
+
+      this.$router.push("/chat");
     },
-  };
-  </script>
+  },
+};
+</script>
   
   <style scoped>
   .form-container {
