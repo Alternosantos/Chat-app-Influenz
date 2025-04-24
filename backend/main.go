@@ -1,3 +1,6 @@
+//when i was writing this only 3 people knew how it worked me gustavo and god now only god know good luck
+
+
 package main
 
 import (
