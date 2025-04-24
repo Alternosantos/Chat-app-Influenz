@@ -80,6 +80,8 @@ func main() {
 	router.Use(corsMiddleware)
 	router.HandleFunc("/ws", handleConnections)
 	router.HandleFunc("/messages", getMessages).Methods("GET")
+	router.HandleFunc("/users", ensureUser).Methods("POST", "OPTIONS")
+
 
 	go handleMessages()
 
@@ -111,6 +113,31 @@ func corsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+func ensureUser(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	_, err := db.Exec(`
+		INSERT INTO users (id, username) VALUES (?, ?)
+		ON DUPLICATE KEY UPDATE username = VALUES(username)
+	`, payload.ID, payload.Name)
+
+	if err != nil {
+		log.Printf("Failed to insert user: %v", err)
+		http.Error(w, "Failed to insert user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
