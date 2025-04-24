@@ -149,7 +149,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	var initMsg struct {
 		Type   string `json:"type"`
 		UserID string `json:"userID"`
+		UserName string `json:"userName"` 
 	}
+	
 	
 	if err := ws.ReadJSON(&initMsg); err != nil || initMsg.Type != "init" {
 		log.Println("Failed to read init message:", err)
@@ -196,16 +198,16 @@ func handleMessages() {
 				msg.Content, msg.Sender, msg.Recipient, msg.SentAt,
 			)
 			if err != nil {
-				log.Printf("Database error: %v", err)
-				continue
+				log.Printf("Database insert error: %v", err)
 			}
 
 			
 			clients.RLock()
-			recipientClient, ok := clients.m[msg.Recipient]
+			recipientClient, recipientOk := clients.m[msg.Recipient]
+			senderClient, senderOk := clients.m[msg.Sender]
 			clients.RUnlock()
-			
-			if ok {
+
+			if recipientOk {
 				recipientClient.Mu.Lock()
 				if err := recipientClient.Conn.WriteJSON(msg); err != nil {
 					log.Printf("Error sending to recipient %s: %v", msg.Recipient, err)
@@ -213,12 +215,7 @@ func handleMessages() {
 				recipientClient.Mu.Unlock()
 			}
 
-			
-			clients.RLock()
-			senderClient, ok := clients.m[msg.Sender]
-			clients.RUnlock()
-			
-			if ok && msg.Sender != msg.Recipient {
+			if senderOk && msg.Sender != msg.Recipient {
 				senderClient.Mu.Lock()
 				if err := senderClient.Conn.WriteJSON(msg); err != nil {
 					log.Printf("Error sending to sender %s: %v", msg.Sender, err)
@@ -228,6 +225,7 @@ func handleMessages() {
 		}
 	}
 }
+
 
 func broadcastUserList() {
 	clients.RLock()

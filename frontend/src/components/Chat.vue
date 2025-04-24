@@ -217,14 +217,8 @@ export default {
     async fetchHistory() {
       if (!this.selectedUser) return;
       try {
-        const protocol = window.location.protocol;
-        const host =
-          process.env.NODE_ENV === "production"
-            ? window.location.host
-            : "localhost:8080";
-
         const res = await fetch(
-          `${protocol}//${host}/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
+          `http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
         );
 
         if (!res.ok) {
