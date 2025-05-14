@@ -1,0 +1,156 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "WebSocket-based chat server with REST endpoints.\nConnect to `/ws` via WebSocket and send a JSON init message: `{\"type\": \"init\", \"userID\": \"user1\", \"userName\": \"Alice\"}`.\nMessage format: `{\"type\": \"message\", \"sender\": \"user1\", \"recipient\": \"user2\", \"content\": \"Hello!\"}`",
+        "title": "Chat App API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/messages": {
+            "get": {
+                "description": "Retrieves messages between two users.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Get chat messages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Sender ID",
+                        "name": "sender",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Recipient ID",
+                        "name": "recipient",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Message"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing sender or recipient",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Error fetching messages",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "post": {
+                "description": "Inserts a new user or updates the existing one.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Ensure user exists",
+                "parameters": [
+                    {
+                        "description": "User payload",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.UserPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to insert user",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.Message": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "recipient": {
+                    "type": "string"
+                },
+                "sender": {
+                    "type": "string"
+                },
+                "sent_at": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.UserPayload": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "description": "Operations related to user creation",
+            "name": "users"
+        },
+        {
+            "description": "Operations related to fetching chat messages",
+            "name": "messages"
+        }
+    ]
+}

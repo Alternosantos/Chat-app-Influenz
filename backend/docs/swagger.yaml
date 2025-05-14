@@ -1,0 +1,104 @@
+basePath: /
+definitions:
+  main.Message:
+    properties:
+      content:
+        type: string
+      recipient:
+        type: string
+      sender:
+        type: string
+      sent_at:
+        type: string
+      type:
+        type: string
+    type: object
+  main.UserPayload:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: |-
+    WebSocket-based chat server with REST endpoints.
+    Connect to `/ws` via WebSocket and send a JSON init message: `{"type": "init", "userID": "user1", "userName": "Alice"}`.
+    Message format: `{"type": "message", "sender": "user1", "recipient": "user2", "content": "Hello!"}`
+  title: Chat App API
+  version: "1.0"
+paths:
+  /messages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves messages between two users.
+      parameters:
+      - description: Sender ID
+        in: query
+        name: sender
+        required: true
+        type: string
+      - description: Recipient ID
+        in: query
+        name: recipient
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Message'
+            type: array
+        "400":
+          description: Missing sender or recipient
+          schema:
+            type: string
+        "500":
+          description: Error fetching messages
+          schema:
+            type: string
+      summary: Get chat messages
+      tags:
+      - messages
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Inserts a new user or updates the existing one.
+      parameters:
+      - description: User payload
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.UserPayload'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "500":
+          description: Failed to insert user
+          schema:
+            type: string
+      summary: Ensure user exists
+      tags:
+      - users
+swagger: "2.0"
+tags:
+- description: Operations related to user creation
+  name: users
+- description: Operations related to fetching chat messages
+  name: messages

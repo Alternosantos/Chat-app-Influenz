@@ -1,5 +1,17 @@
-//when i was writing this only 3 people knew how it worked me gustavo and god now only god know good luck
+// When I was writing this only 3 people knew how it worked: me, Gustavo, and God. 
+// Now only God knows. Good luck.
 
+// @title Chat App API
+// @version 1.0
+// @description WebSocket-based chat server with REST endpoints.
+// @description Connect to `/ws` via WebSocket and send a JSON init message: `{"type": "init", "userID": "user1", "userName": "Alice"}`.
+// @description Message format: `{"type": "message", "sender": "user1", "recipient": "user2", "content": "Hello!"}`
+// @host localhost:8080
+// @BasePath /
+// @tag.name users
+// @tag.description Operations related to user creation
+// @tag.name messages
+// @tag.description Operations related to fetching chat messages
 
 package main
 
@@ -14,10 +26,14 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	_ "github.com/go-sql-driver/mysql"
+
+	_ "chat-app/docs" // Replace with your module name if different
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin:     func(r *http.Request) bool { return true },
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
@@ -26,6 +42,11 @@ type Client struct {
 	Conn *websocket.Conn
 	Mu   sync.Mutex
 }
+type UserPayload struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 
 type Clients struct {
 	sync.RWMutex
@@ -56,7 +77,6 @@ func main() {
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		username VARCHAR(255) UNIQUE NOT NULL,
@@ -85,6 +105,9 @@ func main() {
 	router.HandleFunc("/messages", getMessages).Methods("GET")
 	router.HandleFunc("/users", ensureUser).Methods("POST", "OPTIONS")
 
+	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+	))
 
 	go handleMessages()
 
@@ -102,26 +125,33 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		if r.Header.Get("Upgrade") == "websocket" {
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
 
+// @Summary Ensure user exists
+// @Description Inserts a new user or updates the existing one.
+// @Tags users
+// @Accept json
+// @Produce plain
+// @Param user body UserPayload true "User payload"
+// @Success 200 {string} string "OK"
+// @Failure 400 {string} string "Invalid request"
+// @Failure 500 {string} string "Failed to insert user"
+// @Router /users [post]
 func ensureUser(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
+	var payload UserPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
@@ -142,117 +172,17 @@ func ensureUser(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
-		return
-	}
-
-	var initMsg struct {
-		Type   string `json:"type"`
-		UserID string `json:"userID"`
-		UserName string `json:"userName"` 
-	}
-	
-	
-	if err := ws.ReadJSON(&initMsg); err != nil || initMsg.Type != "init" {
-		log.Println("Failed to read init message:", err)
-		ws.Close()
-		return
-	}
-
-	
-	clients.Lock()
-	clients.m[initMsg.UserID] = &Client{Conn: ws}
-	clients.Unlock()
-
-	log.Printf("New connection from: %s", initMsg.UserID)
-	broadcastUserList()
-
-	defer func() {
-		ws.Close()
-		clients.Lock()
-		delete(clients.m, initMsg.UserID)
-		clients.Unlock()
-		log.Printf("Connection closed for: %s", initMsg.UserID)
-		broadcastUserList()
-	}()
-
-	for {
-		var msg Message
-		if err := ws.ReadJSON(&msg); err != nil {
-			log.Printf("Read error: %v", err)
-			break
-		}
-		msg.SentAt = time.Now()
-		broadcast <- msg
-	}
-}
-
-func handleMessages() {
-	for msg := range broadcast {
-		log.Printf("Processing message: %+v", msg)
-
-		if msg.Type == "message" {
-			// Store message in database
-			_, err := db.Exec(
-				"INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
-				msg.Content, msg.Sender, msg.Recipient, msg.SentAt,
-			)
-			if err != nil {
-				log.Printf("Database insert error: %v", err)
-			}
-
-			
-			clients.RLock()
-			recipientClient, recipientOk := clients.m[msg.Recipient]
-			senderClient, senderOk := clients.m[msg.Sender]
-			clients.RUnlock()
-
-			if recipientOk {
-				recipientClient.Mu.Lock()
-				if err := recipientClient.Conn.WriteJSON(msg); err != nil {
-					log.Printf("Error sending to recipient %s: %v", msg.Recipient, err)
-				}
-				recipientClient.Mu.Unlock()
-			}
-
-			if senderOk && msg.Sender != msg.Recipient {
-				senderClient.Mu.Lock()
-				if err := senderClient.Conn.WriteJSON(msg); err != nil {
-					log.Printf("Error sending to sender %s: %v", msg.Sender, err)
-				}
-				senderClient.Mu.Unlock()
-			}
-		}
-	}
-}
-
-
-func broadcastUserList() {
-	clients.RLock()
-	defer clients.RUnlock()
-
-	userList := make([]string, 0, len(clients.m))
-	for userID := range clients.m {
-		userList = append(userList, userID)
-	}
-
-	update := map[string]interface{}{
-		"type":  "activeUsers",
-		"users": userList,
-	}
-
-	for _, client := range clients.m {
-		client.Mu.Lock()
-		if err := client.Conn.WriteJSON(update); err != nil {
-			log.Printf("Error broadcasting user list: %v", err)
-		}
-		client.Mu.Unlock()
-	}
-}
-
+// @Summary Get chat messages
+// @Description Retrieves messages between two users.
+// @Tags messages
+// @Accept json
+// @Produce json
+// @Param sender query string true "Sender ID"
+// @Param recipient query string true "Recipient ID"
+// @Success 200 {array} Message
+// @Failure 400 {string} string "Missing sender or recipient"
+// @Failure 500 {string} string "Error fetching messages"
+// @Router /messages [get]
 func getMessages(w http.ResponseWriter, r *http.Request) {
 	sender := r.URL.Query().Get("sender")
 	recipient := r.URL.Query().Get("recipient")
@@ -291,5 +221,111 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(messages); err != nil {
 		log.Printf("Error encoding messages: %v", err)
 		http.Error(w, "Error encoding messages", http.StatusInternalServerError)
+	}
+}
+
+func handleConnections(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("WebSocket upgrade error: %v", err)
+		return
+	}
+
+	var initMsg struct {
+		Type     string `json:"type"`
+		UserID   string `json:"userID"`
+		UserName string `json:"userName"`
+	}
+
+	if err := ws.ReadJSON(&initMsg); err != nil || initMsg.Type != "init" {
+		log.Println("Failed to read init message:", err)
+		ws.Close()
+		return
+	}
+
+	clients.Lock()
+	clients.m[initMsg.UserID] = &Client{Conn: ws}
+	clients.Unlock()
+
+	log.Printf("New connection from: %s", initMsg.UserID)
+	broadcastUserList()
+
+	defer func() {
+		ws.Close()
+		clients.Lock()
+		delete(clients.m, initMsg.UserID)
+		clients.Unlock()
+		log.Printf("Connection closed for: %s", initMsg.UserID)
+		broadcastUserList()
+	}()
+
+	for {
+		var msg Message
+		if err := ws.ReadJSON(&msg); err != nil {
+			log.Printf("Read error: %v", err)
+			break
+		}
+		msg.SentAt = time.Now()
+		broadcast <- msg
+	}
+}
+
+func handleMessages() {
+	for msg := range broadcast {
+		log.Printf("Processing message: %+v", msg)
+
+		if msg.Type == "message" {
+			_, err := db.Exec(
+				"INSERT INTO messages (content, sender, recipient, sent_at) VALUES (?, ?, ?, ?)",
+				msg.Content, msg.Sender, msg.Recipient, msg.SentAt,
+			)
+			if err != nil {
+				log.Printf("Database insert error: %v", err)
+			}
+
+			clients.RLock()
+			recipientClient, recipientOk := clients.m[msg.Recipient]
+			senderClient, senderOk := clients.m[msg.Sender]
+			clients.RUnlock()
+
+			if recipientOk {
+				recipientClient.Mu.Lock()
+				if err := recipientClient.Conn.WriteJSON(msg); err != nil {
+					log.Printf("Error sending to recipient %s: %v", msg.Recipient, err)
+				}
+				recipientClient.Mu.Unlock()
+			}
+
+			if senderOk && msg.Sender != msg.Recipient {
+				senderClient.Mu.Lock()
+				if err := senderClient.Conn.WriteJSON(msg); err != nil {
+					log.Printf("Error sending to sender %s: %v", msg.Sender, err)
+				}
+				senderClient.Mu.Unlock()
+			}
+		}
+	}
+}
+
+func broadcastUserList() {
+	clients.RLock()
+	defer clients.RUnlock()
+
+	userList := make([]string, 0, len(clients.m))
+	for userID := range clients.m {
+		userList = append(userList, userID)
+	}
+
+	update := map[string]interface{}{
+		"type":  "activeUsers",
+		"users": userList,
+	}
+
+	for _, client := range clients.m {
+		client.Mu.Lock()
+		if err := client.Conn.WriteJSON(update); err != nil {
+			log.Printf("Error broadcasting user list: %v", err)
+		}
+		client.Mu.Unlock()
 	}
 }
