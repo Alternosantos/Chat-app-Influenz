@@ -27,7 +27,7 @@ import (
 	"github.com/gorilla/websocket"
 	_ "github.com/go-sql-driver/mysql"
 
-	_ "chat-app/docs" // Replace with your module name if different
+	_ "chat-app/docs"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -66,10 +66,29 @@ type Message struct {
 }
 
 func main() {
+	
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = "db" 
+	}
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		dbUser = "root"
+	}
+	dbPass := os.Getenv("DB_PASSWORD")
+	if dbPass == "" {
+		dbPass = "secret"
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "chatdb"
+	}
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?parseTime=true", dbUser, dbPass, dbHost, dbName)
 	var err error
-	db, err = sql.Open("mysql", "root:secret@tcp(db:3306)/chatdb?parseTime=true")
+	db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("DB connection error:", err)
 	}
 	defer db.Close()
 
@@ -98,7 +117,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	
 	router := mux.NewRouter()
 	router.Use(corsMiddleware)
 	router.HandleFunc("/ws", handleConnections)
@@ -115,7 +134,6 @@ func main() {
 		Addr:    ":8080",
 		Handler: router,
 	}
-
 	log.Println("Server started on :8080")
 	log.Fatal(server.ListenAndServe())
 }
