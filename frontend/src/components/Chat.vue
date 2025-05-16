@@ -43,26 +43,40 @@
       </div>
 
       <div class="messages-container">
-        <h2>{{ selectedUser ? selectedUser.name : "Select a user" }}</h2>
-        <div class="messages" ref="messages">
-          <div
-            v-for="(msg, index) in activeMessages"
-            :key="index"
-            :class="['message', msg.sender === sender ? 'sent' : 'received']"
-          >
-            <span class="message-content">{{ msg.content }}</span>
-            <span class="message-time">{{ formatTime(msg.sent_at) }}</span>
+        <template v-if="selectedUser">
+          <h2>{{ selectedUser.name }}</h2>
+          <div class="messages" ref="messages">
+            <div
+              v-for="(msg, index) in activeMessages"
+              :key="index"
+              :class="['message', msg.sender === sender ? 'sent' : 'received']"
+            >
+              <span class="message-content">{{ msg.content }}</span>
+              <span class="message-time">{{ formatTime(msg.sent_at) }}</span>
+            </div>
           </div>
-        </div>
 
-        <div class="input-area" v-if="selectedUser">
-          <textarea
-            v-model="newMessage"
-            @keyup.enter.exact="sendMessage"
-            placeholder="Type your message..."
-          ></textarea>
-          <button @click="sendMessage">Send</button>
-        </div>
+          <div class="input-area">
+            <textarea
+              v-model="newMessage"
+              @keyup.enter.exact="sendMessage"
+              placeholder="Type your message..."
+            ></textarea>
+            <button @click="sendMessage">Send</button>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="no-chat-selected">
+            <img
+              src="../assets/InfluenzLogo.png"
+              alt="No chat selected"
+              class="center-image"
+            />
+            <h2>Select a user to start chatting</h2>
+            <p>Your messages will appear here.</p>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -93,6 +107,7 @@ export default {
     };
   },
   created() {
+    localStorage.removeItem("selectedUser");
     const savedUser = localStorage.getItem("selectedUser");
     if (savedUser) {
       try {
