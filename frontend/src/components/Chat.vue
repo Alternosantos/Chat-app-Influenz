@@ -9,8 +9,9 @@
       :class="{ collapsed: !showUsers }"
       :title="showUsers ? 'Hide users' : 'Show users'"
     ></button>
-    <div class="chat-wrapper">
-      <div class="users-container" v-show="showUsers">
+    <div class="chat-wrapper" :class="{ 'chat-active': isMobileView && chatActive }">
+      <!-- USERS LIST -->
+      <div class="users-container" v-show="!isMobileView || !chatActive">
         <h2>Users</h2>
         <div class="search-bar">
           <input type="text" placeholder="Search users" v-model="searchQuery" />
@@ -42,8 +43,16 @@
         </div>
       </div>
 
-      <div class="messages-container">
+      <!-- MESSAGES -->
+      <div
+        class="messages-container"
+        v-if="selectedUser && (!isMobileView || chatActive)"
+      >
+
         <template v-if="selectedUser">
+          <button class="back-to-users" @click="backToUsers" v-if="isMobileView">
+          ← Back to chats
+        </button>
           <h2>{{ selectedUser.name }}</h2>
           <div class="messages" ref="messages">
             <div
@@ -86,8 +95,8 @@
 export default {
   name: "ChatComponent",
   data() {
-    let userId = localStorage.getItem("user_id");
-    let userName = localStorage.getItem("user_name");
+    const userId = localStorage.getItem("user_id");
+    const userName = localStorage.getItem("user_name");
 
     if (!userId || !userName) {
       window.location.href = "/";
@@ -104,10 +113,11 @@ export default {
       ws: null,
       sender: userId,
       showUsers: true,
+      isMobileView: window.innerWidth < 992,
+      chatActive: false,
     };
   },
   created() {
-    localStorage.removeItem("selectedUser");
     const savedUser = localStorage.getItem("selectedUser");
     if (savedUser) {
       try {
@@ -119,9 +129,18 @@ export default {
         console.error("Failed to parse saved user", e);
       }
     }
+
+    window.addEventListener("resize", this.handleResize);
   },
+
   mounted() {
     this.connectWebSocket();
+  },
+  beforeUnmount() {
+    if (this.ws) {
+      this.ws.close();
+    }
+    window.removeEventListener("resize", this.handleResize);
   },
   watch: {
     selectedUser(newUser) {
@@ -131,13 +150,13 @@ export default {
           (name) => name !== newUser.name
         );
         localStorage.setItem("selectedUser", JSON.stringify(newUser));
+
+        // On mobile, switch to chat view when user is selected
+        if (this.isMobileView) {
+          this.chatActive = true;
+        }
       }
     },
-  },
-  beforeUnmount() {
-    if (this.ws) {
-      this.ws.close();
-    }
   },
   computed: {
     filteredUsers() {
@@ -158,6 +177,13 @@ export default {
     },
   },
   methods: {
+    handleResize() {
+      this.isMobileView = window.innerWidth < 992;
+      if (!this.isMobileView) {
+        this.chatActive = false;
+      }
+    },
+
     toggleUsers() {
       this.showUsers = !this.showUsers;
 
@@ -165,13 +191,8 @@ export default {
         document.body.style.overflow = this.showUsers ? "hidden" : "auto";
       }
     },
-    connectWebSocket() {
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const host =
-        process.env.NODE_ENV === "production"
-          ? window.location.host
-          : "localhost:8080";
 
+    connectWebSocket() {
       this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
 
       this.ws.onopen = () => {
@@ -267,6 +288,26 @@ export default {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify(message));
         }
+
+        // Add the sent message to the UI immediately
+        this.messages.push({
+          ...message,
+          sender: this.sender,
+          recipient: this.selectedUser.name,
+        });
+
+        this.scrollToBottom();
+
+        // Simulate reply (for demo purposes)
+        setTimeout(() => {
+          this.messages.push({
+            content: `This is an automated reply from ${this.selectedUser.name}`,
+            sender: this.selectedUser.name,
+            recipient: this.sender,
+            sent_at: new Date().toISOString(),
+          });
+          this.scrollToBottom();
+        }, 1000);
       }
     },
 
@@ -302,7 +343,14 @@ export default {
       this.newMessageUsers = this.newMessageUsers.filter(
         (name) => name !== user.name
       );
+
       this.fetchHistory();
+
+      this.$nextTick(() => {
+        if (this.isMobileView) {
+          this.chatActive = true;
+        }
+      });
     },
 
     formatTime(timestamp) {
@@ -337,6 +385,14 @@ export default {
           year: "2-digit",
         });
       }
+    },
+
+    backToUsers() {
+      this.chatActive = false;
+    },
+
+    toggleUsersContainer() {
+      this.showUsers = !this.showUsers;
     },
   },
 };
