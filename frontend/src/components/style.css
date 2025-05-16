@@ -611,3 +611,21 @@ body {
     transition: all 0.3s ease;
     border-radius: 10px;
 }
+.no-chat-selected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: white;
+    padding: 20px;
+  }
+  
+  .center-image {
+    max-width: 300px;
+    width: 60%;
+    margin-bottom: 20px;
+    opacity: 0.8;
+  }
+  
