@@ -350,6 +350,7 @@ body {
     cursor: pointer;
     z-index: 10; /* Garante que fique acima de outros elementos */
     transition: transform 0.2s ease;
+
 }
 .back-to-users svg {
     width: 24px;
@@ -602,3 +603,60 @@ body {
 }
     
 }
+.chat-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    min-height: 60px;
+    margin-bottom: 15px;
+    gap: 10px; 
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+  }
+  
+  
+  .chat-header .back-to-users {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  
+  .avatar-circle {
+    width: 45px;
+    height: 45px;
+    background-color: #3a143a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 25px;
+    flex-shrink: 0;
+    margin-right: 10px;
+  }
+  
+  
+  .chat-username {
+    font-size: 25px;
+    font-weight: bold;
+    color: white;
+    margin: 0;
+  }
+  
+  
