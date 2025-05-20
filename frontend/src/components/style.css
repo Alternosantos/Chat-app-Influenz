@@ -78,7 +78,7 @@ body {
 }
 
 /* Desktop layout (both panels visible) */
-@media (min-width: 992px) {
+@media (min-width: 1025px) {
     .chat-wrapper {
         flex-direction: row; 
         width: 1150px;
@@ -111,6 +111,7 @@ body {
 .chat-active .users-container {
     display: none;
      border-radius: 10px;
+     margin-bottom: 45px;
 }
 
 .chat-active .messages-container {
@@ -417,14 +418,15 @@ body {
 /* Responsive adjustments for smaller screens */
 @media (max-width: 991px) {
     body {
-        padding: 0;
+        padding: 40px;
+        margin-top: 60px;
     }
     
     .main-container {
-        padding: 10px;
+        padding: 30px;
         margin: 0;
         max-width: 100%;
-         border-radius: 10px;
+        border-radius: 10px;
     }
     
     .chat-wrapper {
@@ -436,8 +438,15 @@ body {
     
     .users-container, 
     .messages-container {
-        height: 100%;
+        height: 800%;
         border-radius: 10px;
+    }
+    .search-bar{
+         display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 20px;
+    width: 100%;
     }
 }
 
@@ -509,7 +518,7 @@ body {
 
   /* Containers principais mais amplos */
   .main-container {
-    width: 98%;
+    width: 90%;
     max-width: 1000px;
     margin: 0 auto;
     padding: 0;
@@ -640,3 +649,4 @@ body {
 }
     
 }
+

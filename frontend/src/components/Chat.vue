@@ -1,5 +1,4 @@
-<!--when i was writing this only 3 people knew how it worked me gustavo and god now only god know good luck!! -->
-
+<!--when i was writing this only 3 people knew how it worked me gustavo and god now only god knows good luck!!-->
 <template>
   <div class="main-container">
     <h1 class="chat-title">Messagess</h1>
@@ -9,6 +8,7 @@
       :class="{ collapsed: !showUsers }"
       :title="showUsers ? 'Hide users' : 'Show users'"
     ></button>
+
     <div class="chat-wrapper" :class="{ 'chat-active': isMobileView && chatActive }">
       <!-- USERS LIST -->
       <div class="users-container" v-show="!isMobileView || !chatActive">
@@ -44,15 +44,11 @@
       </div>
 
       <!-- MESSAGES -->
-      <div
-        class="messages-container"
-        v-if="selectedUser && (!isMobileView || chatActive)"
-      >
-
+      <div class="messages-container" v-if="!isMobileView || chatActive">
         <template v-if="selectedUser">
           <button class="back-to-users" @click="backToUsers" v-if="isMobileView">
-          Back 
-        </button>
+            ← Back to chats
+          </button>
           <h2>{{ selectedUser.name }}</h2>
           <div class="messages" ref="messages">
             <div
@@ -118,6 +114,7 @@ export default {
     };
   },
   created() {
+    localStorage.removeItem("selectedUser");
     const savedUser = localStorage.getItem("selectedUser");
     if (savedUser) {
       try {
@@ -132,26 +129,22 @@ export default {
 
     window.addEventListener("resize", this.handleResize);
   },
-
   mounted() {
     this.connectWebSocket();
   },
   beforeUnmount() {
-    if (this.ws) {
-      this.ws.close();
-    }
+    if (this.ws) this.ws.close();
     window.removeEventListener("resize", this.handleResize);
   },
   watch: {
     selectedUser(newUser) {
-      if (newUser && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      if (newUser && this.ws?.readyState === WebSocket.OPEN) {
         this.fetchHistory();
         this.newMessageUsers = this.newMessageUsers.filter(
           (name) => name !== newUser.name
         );
         localStorage.setItem("selectedUser", JSON.stringify(newUser));
 
-        // On mobile, switch to chat view when user is selected
         if (this.isMobileView) {
           this.chatActive = true;
         }
@@ -183,15 +176,12 @@ export default {
         this.chatActive = false;
       }
     },
-
     toggleUsers() {
       this.showUsers = !this.showUsers;
-
       if (window.innerWidth <= 768) {
         document.body.style.overflow = this.showUsers ? "hidden" : "auto";
       }
     },
-
     connectWebSocket() {
       this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
 
@@ -220,18 +210,15 @@ export default {
           const exists = this.messages.some(
             (m) => m.sent_at === message.sent_at && m.sender === message.sender
           );
-
           if (!exists) {
             this.messages.push(message);
             this.updateLastMessage(message);
-
             const isCurrent = this.selectedUser?.name === message.sender;
             if (!isCurrent && message.recipient === this.sender) {
               if (!this.newMessageUsers.includes(message.sender)) {
                 this.newMessageUsers.push(message.sender);
               }
             }
-
             if (
               message.sender === this.selectedUser?.name ||
               message.recipient === this.selectedUser?.name
@@ -251,19 +238,13 @@ export default {
         console.error("WebSocket error:", error);
       };
     },
-
     async fetchHistory() {
       if (!this.selectedUser) return;
       try {
         const res = await fetch(
           `http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
         );
-
-        if (!res.ok) {
-          console.error("Server error:", await res.text());
-          return;
-        }
-
+        if (!res.ok) return console.error("Server error:", await res.text());
         const data = await res.json();
         this.messages = Array.isArray(data) ? data : [];
         this.scrollToBottom();
@@ -271,46 +252,26 @@ export default {
         console.error("Fetch error:", err);
       }
     },
-
     sendMessage() {
-      if (this.newMessage.trim() && this.selectedUser) {
-        const message = {
-          type: "message",
-          content: this.newMessage,
-          sender: this.sender,
-          recipient: this.selectedUser.name,
-          sent_at: new Date().toISOString(),
-        };
+      if (!this.newMessage.trim() || !this.selectedUser) return;
 
-        this.newMessage = "";
-        this.updateLastMessage(message);
+      const message = {
+        type: "message",
+        content: this.newMessage,
+        sender: this.sender,
+        recipient: this.selectedUser.name,
+        sent_at: new Date().toISOString(),
+      };
 
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify(message));
-        }
-
-        // Add the sent message to the UI immediately
-        this.messages.push({
-          ...message,
-          sender: this.sender,
-          recipient: this.selectedUser.name,
-        });
-
-        this.scrollToBottom();
-
-        // Simulate reply (for demo purposes)
-        setTimeout(() => {
-          this.messages.push({
-            content: `This is an automated reply from ${this.selectedUser.name}`,
-            sender: this.selectedUser.name,
-            recipient: this.sender,
-            sent_at: new Date().toISOString(),
-          });
-          this.scrollToBottom();
-        }, 1000);
+      this.newMessage = "";
+      this.updateLastMessage(message);
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(message));
       }
-    },
 
+      this.messages.push({ ...message });
+      this.scrollToBottom();
+    },
     updateLastMessage(message) {
       const user = this.users.find(
         (u) => u.name === message.sender || u.name === message.recipient
@@ -329,33 +290,27 @@ export default {
         }
       }
     },
-
     scrollToBottom() {
       this.$nextTick(() => {
         const el = this.$refs.messages;
         if (el) el.scrollTop = el.scrollHeight;
       });
     },
-
     selectUser(user) {
       user.hasNewMessage = false;
       this.selectedUser = user;
       this.newMessageUsers = this.newMessageUsers.filter(
         (name) => name !== user.name
       );
-
       this.fetchHistory();
-
       this.$nextTick(() => {
         if (this.isMobileView) {
           this.chatActive = true;
         }
       });
     },
-
     formatTime(timestamp) {
       if (!timestamp) return "";
-
       const now = new Date();
       const msgDate = new Date(timestamp);
       const diffDays = Math.floor((now - msgDate) / (1000 * 60 * 60 * 24));
@@ -368,16 +323,7 @@ export default {
       } else if (diffDays === 1) {
         return "Ontem";
       } else if (diffDays < 7) {
-        const days = [
-          "Sunday",
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-        ];
-        return days[msgDate.getDay()];
+        return msgDate.toLocaleDateString("en-US", { weekday: "long" });
       } else {
         return msgDate.toLocaleDateString([], {
           day: "2-digit",
@@ -386,13 +332,8 @@ export default {
         });
       }
     },
-
     backToUsers() {
       this.chatActive = false;
-    },
-
-    toggleUsersContainer() {
-      this.showUsers = !this.showUsers;
     },
   },
 };
