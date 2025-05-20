@@ -2,7 +2,7 @@
 
 <template>
   <div class="main-container">
-    <h1 class="chat-title">Messages</h1>
+    <h1 class="chat-title">Messagess</h1>
     <button
       @click="toggleUsers"
       class="toggle-users-btn"
@@ -51,7 +51,7 @@
 
         <template v-if="selectedUser">
           <button class="back-to-users" @click="backToUsers" v-if="isMobileView">
-          ← Back to chats
+          Back 
         </button>
           <h2>{{ selectedUser.name }}</h2>
           <div class="messages" ref="messages">
