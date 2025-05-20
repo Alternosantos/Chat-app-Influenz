@@ -2,7 +2,10 @@
 <template>
   <div class="main-container">
     <h1 class="chat-title">Messages</h1>
-    <div class="chat-wrapper" :class="{ 'chat-active': isMobileView && chatActive }">
+    <div
+      class="chat-wrapper"
+      :class="{ 'chat-active': isMobileView && chatActive }"
+    >
       <!-- USERS LIST -->
       <div class="users-container" v-show="!isMobileView || !chatActive">
         <h2>Users</h2>
@@ -39,12 +42,39 @@
       <!-- MESSAGES -->
       <div class="messages-container" v-if="!isMobileView || chatActive">
         <template v-if="selectedUser">
-          <button class="back-to-users" @click="backToUsers" v-if="isMobileView">
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M15 18L9 12L15 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-</button>
-          <h2>{{ selectedUser.name }}</h2>
+          <div class="chat-header">
+            <button
+              class="back-to-users"
+              @click="backToUsers"
+              v-if="isMobileView"
+              aria-label="Back to user list"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="white"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <div class="user-info">
+              <div class="avatar-circle">
+                <span class="avatar-initial">{{
+                  selectedUser.name.charAt(0)
+                }}</span>
+              </div>
+              <span class="chat-username">{{ selectedUser.name }}</span>
+            </div>
+          </div>
+
           <div class="messages" ref="messages">
             <div
               v-for="(msg, index) in activeMessages"
@@ -263,8 +293,6 @@ export default {
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(message));
       }
-
-      this.messages.push({ ...message });
       this.scrollToBottom();
     },
     updateLastMessage(message) {
