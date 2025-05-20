@@ -1,14 +1,7 @@
 <!--when i was writing this only 3 people knew how it worked me gustavo and god now only god knows good luck!!-->
 <template>
   <div class="main-container">
-    <h1 class="chat-title">Messagess</h1>
-    <button
-      @click="toggleUsers"
-      class="toggle-users-btn"
-      :class="{ collapsed: !showUsers }"
-      :title="showUsers ? 'Hide users' : 'Show users'"
-    ></button>
-
+    <h1 class="chat-title">Messages</h1>
     <div class="chat-wrapper" :class="{ 'chat-active': isMobileView && chatActive }">
       <!-- USERS LIST -->
       <div class="users-container" v-show="!isMobileView || !chatActive">
@@ -47,8 +40,10 @@
       <div class="messages-container" v-if="!isMobileView || chatActive">
         <template v-if="selectedUser">
           <button class="back-to-users" @click="backToUsers" v-if="isMobileView">
-            ← Back to chats
-          </button>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 18L9 12L15 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
           <h2>{{ selectedUser.name }}</h2>
           <div class="messages" ref="messages">
             <div
