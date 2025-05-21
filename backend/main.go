@@ -45,7 +45,6 @@ type Client struct {
 	Mu   sync.Mutex
 }
 type UserPayload struct {
-	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -171,26 +170,29 @@ func corsMiddleware(next http.Handler) http.Handler {
 // @Failure 500 {string} string "Failed to insert user"
 // @Router /users [post]
 func ensureUser(w http.ResponseWriter, r *http.Request) {
-	var payload UserPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
+    var payload UserPayload
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        http.Error(w, "Invalid request", http.StatusBadRequest)
+        return
+    }
+    if payload.Name == "" {
+        http.Error(w, "Missing username", http.StatusBadRequest)
+        return
+    }
 
-	_, err := db.Exec(`
-		INSERT INTO users (id, username) VALUES (?, ?)
-		ON DUPLICATE KEY UPDATE username = VALUES(username)
-	`, payload.ID, payload.Name)
+    _, err := db.Exec(`
+        INSERT INTO users (username) VALUES (?)
+        ON DUPLICATE KEY UPDATE username = VALUES(username)
+    `, payload.Name)
 
-	if err != nil {
-		log.Printf("Failed to insert user: %v", err)
-		http.Error(w, "Failed to insert user", http.StatusInternalServerError)
-		return
-	}
+    if err != nil {
+        log.Printf("Failed to insert user: %v", err)
+        http.Error(w, "Failed to insert user", http.StatusInternalServerError)
+        return
+    }
 
-	w.WriteHeader(http.StatusOK)
+    w.WriteHeader(http.StatusOK)
 }
-
 
 // @Summary Get chat messages
 // @Description Retrieves messages between two users.
@@ -333,12 +335,11 @@ func broadcastUserList() {
 
 	userList := make([]string, 0, len(clients.m))
 	for userID := range clients.m {
-		userList = append(userList, userID)
+    	userList = append(userList, userID)
 	}
-
 	update := map[string]interface{}{
-		"type":  "activeUsers",
-		"users": userList,
+    	"type":  "activeUsers",
+    	"users": userList,
 	}
 
 	for _, client := range clients.m {
