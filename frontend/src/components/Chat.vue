@@ -22,7 +22,7 @@
             :class="{ active: selectedUser && selectedUser.name === user.name }"
           >
             <div class="avatar-wrapper">
-              <img :src="user.avatar" alt="User Avatar" />
+              <img :src="user.avatar" />
               <span
                 v-if="
                   user.hasNewMessage &&
@@ -31,9 +31,9 @@
                 class="notification-dot"
               ></span>
             </div>
-            <div>
+            <div class="user-details">
               <strong>{{ user.name }}</strong>
-              <p>{{ user.lastMessage }}</p>
+              <p class="last-message">{{ user.lastMessage }}</p>
             </div>
           </div>
         </div>
@@ -209,6 +209,9 @@ export default {
     },
     connectWebSocket() {
       this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
+      this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+      const delay = Math.min(3000 * this.reconnectAttempts, 30000); // max 30s
+      setTimeout(this.connectWebSocket, delay);
 
       this.ws.onopen = () => {
         console.log("WebSocket connected");
@@ -224,13 +227,26 @@ export default {
         const message = JSON.parse(event.data);
 
         if (message.type === "activeUsers") {
-          this.users = message.users
-            .filter((name) => name !== this.sender)
-            .map((name) => ({
-              name,
-              avatar: `https://api.dicebear.com/6.x/identicon/svg?seed=${name}`,
-              lastMessage: "",
-            }));
+          // 1. Cache the old users before replacing
+          const oldUsers = this.users || [];
+          this.users = (message.users || [])
+            .filter((name) => !!name) // skip empty names
+            .filter((name) => name !== this.sender) // exclude self
+            .map((name) => {
+              const oldUser = oldUsers.find((u) => u.name === name);
+              return {
+                name,
+                avatar: `https://api.dicebear.com/6.x/identicon/svg?seed=${name}`,
+                lastMessage: oldUser ? oldUser.lastMessage : "",
+                hasNewMessage: oldUser ? oldUser.hasNewMessage : false,
+                lastMessageTime: oldUser ? oldUser.lastMessageTime : 0,
+              };
+            })
+            .sort((a, b) => {
+              const dateA = new Date(a.lastMessageTime || 0);
+              const dateB = new Date(b.lastMessageTime || 0);
+              return dateB - dateA;
+            });
         } else {
           const exists = this.messages.some(
             (m) => m.sent_at === message.sent_at && m.sender === message.sender
@@ -304,6 +320,8 @@ export default {
           message.content.length > 20
             ? message.content.substring(0, 20) + "..."
             : message.content;
+        // NEW: update lastMessageTime
+        user.lastMessageTime = message.sent_at || new Date().toISOString();
 
         if (
           message.sender !== this.sender &&
@@ -357,6 +375,8 @@ export default {
     },
     backToUsers() {
       this.chatActive = false;
+      this.selectedUser = null;
+      localStorage.removeItem("selectedUser");
     },
   },
 };
