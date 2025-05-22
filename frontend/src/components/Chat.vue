@@ -1,7 +1,6 @@
 <!--when i was writing this only 3 people knew how it worked me gustavo and god now only god knows good luck!!-->
 <template>
   <div class="main-container">
-    <h1 class="chat-title">Messages</h1>
     <div
       class="chat-wrapper"
       :class="{ 'chat-active': isMobileView && chatActive }"
