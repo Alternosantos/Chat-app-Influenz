@@ -139,7 +139,7 @@ export default {
       isLoading: false,
       isConnecting: false,
       notifications: {}, // Added notifications object
-      reconnectAttempts: 0 // Added reconnect counter
+      reconnectAttempts: 0, // Added reconnect counter
     };
   },
   created() {
@@ -165,12 +165,13 @@ export default {
   beforeUnmount() {
     if (this.ws) this.ws.close();
     window.removeEventListener("resize", this.handleResize);
-    
+
     // Clean up old notifications
-    const currentUsers = this.users.map(u => u.name);
+    const currentUsers = this.users.map((u) => u.name);
     this.notifications = Object.fromEntries(
-      Object.entries(this.notifications)
-        .filter(([username]) => currentUsers.includes(username))
+      Object.entries(this.notifications).filter(([username]) =>
+        currentUsers.includes(username)
+      )
     );
     this.saveNotifications();
   },
@@ -210,29 +211,30 @@ export default {
   methods: {
     loadNotifications() {
       try {
-        const saved = localStorage.getItem('chatNotifications');
+        const saved = localStorage.getItem(`chatNotifications_${this.sender}`);
         this.notifications = saved ? JSON.parse(saved) : {};
-        
-        // Initialize users with saved notification states
-        this.users = this.users.map(user => ({
+
+        this.users = this.users.map((user) => ({
           ...user,
-          hasNewMessage: this.notifications[user.name] || false
+          hasNewMessage: this.notifications[user.name] || false,
         }));
       } catch (e) {
-        console.error('Failed to load notifications', e);
+        console.error("Failed to load notifications", e);
         this.notifications = {};
       }
     },
-    
     saveNotifications() {
-      localStorage.setItem('chatNotifications', JSON.stringify(this.notifications));
+      localStorage.setItem(
+        `chatNotifications_${this.sender}`,
+        JSON.stringify(this.notifications)
+      );
     },
 
     updateNotificationState(userName, hasUnread) {
       this.notifications[userName] = hasUnread;
       this.saveNotifications();
-      
-      const user = this.users.find(u => u.name === userName);
+
+      const user = this.users.find((u) => u.name === userName);
       if (user) {
         user.hasNewMessage = hasUnread;
       }
@@ -272,24 +274,24 @@ export default {
         const message = JSON.parse(event.data);
 
         if (message.type === "activeUsers") {
-          const oldUsers = this.users || [];
+          const oldMetadata = this.loadUserMetadata();
+
           this.users = (message.users || [])
-            .filter((name) => !!name)
-            .filter((name) => name !== this.sender)
+            .filter((name) => !!name && name !== this.sender)
             .map((name) => {
-              const oldUser = oldUsers.find((u) => u.name === name);
+              const meta = oldMetadata[name] || {};
               return {
                 name,
                 avatar: `https://api.dicebear.com/6.x/identicon/svg?seed=${name}`,
-                lastMessage: oldUser ? oldUser.lastMessage : "",
-                hasNewMessage: oldUser ? oldUser.hasNewMessage : false,
-                lastMessageTime: oldUser ? oldUser.lastMessageTime : 0,
+                lastMessage: meta.lastMessage || "",
+                hasNewMessage: this.notifications?.[name] || false,
+                lastMessageTime: meta.lastMessageTime || 0,
               };
             })
             .sort((a, b) => {
-              const dateA = new Date(a.lastMessageTime || 0);
-              const dateB = new Date(b.lastMessageTime || 0);
-              return dateB - dateA;
+              if (!a.lastMessageTime) return 1;
+              if (!b.lastMessageTime) return -1;
+              return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
             });
         } else {
           const exists = this.messages.some(
@@ -300,9 +302,9 @@ export default {
             this.messages.push(message);
             this.updateLastMessage(message);
 
-            const isCurrentChat = this.selectedUser && 
-                                this.selectedUser.name === message.sender;
-            
+            const isCurrentChat =
+              this.selectedUser && this.selectedUser.name === message.sender;
+
             if (!isCurrentChat && message.recipient === this.sender) {
               this.updateNotificationState(message.sender, true);
             }
@@ -312,6 +314,7 @@ export default {
               message.recipient === this.selectedUser?.name
             ) {
               this.scrollToBottom();
+              this.saveUserMetadata();
             }
           }
         }
@@ -441,7 +444,30 @@ export default {
       this.chatActive = false;
       this.selectedUser = null;
       localStorage.removeItem("selectedUser");
-    }
+    },
+    saveUserMetadata() {
+      const metadata = this.users.reduce((acc, user) => {
+        acc[user.name] = {
+          lastMessage: user.lastMessage,
+          lastMessageTime: user.lastMessageTime,
+        };
+        return acc;
+      }, {});
+      localStorage.setItem(
+        `userMetadata_${this.sender}`,
+        JSON.stringify(metadata)
+      );
+    },
+
+    loadUserMetadata() {
+      try {
+        const stored = localStorage.getItem(`userMetadata_${this.sender}`);
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        console.error("Failed to load user metadata:", e);
+        return {};
+      }
+    },
   },
 };
 </script>
