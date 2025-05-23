@@ -1,6 +1,7 @@
 <!--when i was writing this only 3 people knew how it worked me gustavo and god now only god knows good luck!!-->
 <template>
   <div class="main-container">
+    <h1 class="chat-title">Messages</h1>
     <div
       class="chat-wrapper"
       :class="{ 'chat-active': isMobileView && chatActive }"
@@ -135,9 +136,14 @@ export default {
       showUsers: true,
       isMobileView: window.innerWidth < 992,
       chatActive: false,
+      isLoading: false,
+      isConnecting: false,
+      notifications: {}, // Added notifications object
+      reconnectAttempts: 0 // Added reconnect counter
     };
   },
   created() {
+    this.loadNotifications();
     localStorage.removeItem("selectedUser");
     const savedUser = localStorage.getItem("selectedUser");
     if (savedUser) {
@@ -159,6 +165,14 @@ export default {
   beforeUnmount() {
     if (this.ws) this.ws.close();
     window.removeEventListener("resize", this.handleResize);
+    
+    // Clean up old notifications
+    const currentUsers = this.users.map(u => u.name);
+    this.notifications = Object.fromEntries(
+      Object.entries(this.notifications)
+        .filter(([username]) => currentUsers.includes(username))
+    );
+    this.saveNotifications();
   },
   watch: {
     selectedUser(newUser) {
@@ -194,26 +208,58 @@ export default {
     },
   },
   methods: {
+    loadNotifications() {
+      try {
+        const saved = localStorage.getItem('chatNotifications');
+        this.notifications = saved ? JSON.parse(saved) : {};
+        
+        // Initialize users with saved notification states
+        this.users = this.users.map(user => ({
+          ...user,
+          hasNewMessage: this.notifications[user.name] || false
+        }));
+      } catch (e) {
+        console.error('Failed to load notifications', e);
+        this.notifications = {};
+      }
+    },
+    
+    saveNotifications() {
+      localStorage.setItem('chatNotifications', JSON.stringify(this.notifications));
+    },
+
+    updateNotificationState(userName, hasUnread) {
+      this.notifications[userName] = hasUnread;
+      this.saveNotifications();
+      
+      const user = this.users.find(u => u.name === userName);
+      if (user) {
+        user.hasNewMessage = hasUnread;
+      }
+    },
+
     handleResize() {
       this.isMobileView = window.innerWidth < 992;
       if (!this.isMobileView) {
         this.chatActive = false;
       }
     },
+
     toggleUsers() {
       this.showUsers = !this.showUsers;
       if (window.innerWidth <= 768) {
         document.body.style.overflow = this.showUsers ? "hidden" : "auto";
       }
     },
+
     connectWebSocket() {
+      this.isConnecting = true;
       this.ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
-      this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
-      const delay = Math.min(3000 * this.reconnectAttempts, 30000); // max 30s
-      setTimeout(this.connectWebSocket, delay);
 
       this.ws.onopen = () => {
         console.log("WebSocket connected");
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
         this.ws.send(
           JSON.stringify({
             type: "init",
@@ -226,11 +272,10 @@ export default {
         const message = JSON.parse(event.data);
 
         if (message.type === "activeUsers") {
-          // 1. Cache the old users before replacing
           const oldUsers = this.users || [];
           this.users = (message.users || [])
-            .filter((name) => !!name) // skip empty names
-            .filter((name) => name !== this.sender) // exclude self
+            .filter((name) => !!name)
+            .filter((name) => name !== this.sender)
             .map((name) => {
               const oldUser = oldUsers.find((u) => u.name === name);
               return {
@@ -250,15 +295,18 @@ export default {
           const exists = this.messages.some(
             (m) => m.sent_at === message.sent_at && m.sender === message.sender
           );
+
           if (!exists) {
             this.messages.push(message);
             this.updateLastMessage(message);
-            const isCurrent = this.selectedUser?.name === message.sender;
-            if (!isCurrent && message.recipient === this.sender) {
-              if (!this.newMessageUsers.includes(message.sender)) {
-                this.newMessageUsers.push(message.sender);
-              }
+
+            const isCurrentChat = this.selectedUser && 
+                                this.selectedUser.name === message.sender;
+            
+            if (!isCurrentChat && message.recipient === this.sender) {
+              this.updateNotificationState(message.sender, true);
             }
+
             if (
               message.sender === this.selectedUser?.name ||
               message.recipient === this.selectedUser?.name
@@ -271,27 +319,39 @@ export default {
 
       this.ws.onclose = () => {
         console.log("WebSocket closed. Reconnecting...");
-        setTimeout(this.connectWebSocket, 3000);
+        this.isConnecting = false;
+        this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+        const delay = Math.min(3000 * this.reconnectAttempts, 30000);
+        setTimeout(this.connectWebSocket, delay);
       };
 
       this.ws.onerror = (error) => {
         console.error("WebSocket error:", error);
+        this.isConnecting = false;
       };
     },
+
     async fetchHistory() {
       if (!this.selectedUser) return;
+      this.isLoading = true;
       try {
         const res = await fetch(
           `http://localhost:8080/messages?sender=${this.sender}&recipient=${this.selectedUser.name}`
         );
-        if (!res.ok) return console.error("Server error:", await res.text());
+        if (!res.ok) {
+          console.error("Server error:", await res.text());
+          return;
+        }
         const data = await res.json();
         this.messages = Array.isArray(data) ? data : [];
         this.scrollToBottom();
       } catch (err) {
         console.error("Fetch error:", err);
+      } finally {
+        this.isLoading = false;
       }
     },
+
     sendMessage() {
       if (!this.newMessage.trim() || !this.selectedUser) return;
 
@@ -310,6 +370,7 @@ export default {
       }
       this.scrollToBottom();
     },
+
     updateLastMessage(message) {
       const user = this.users.find(
         (u) => u.name === message.sender || u.name === message.recipient
@@ -319,7 +380,6 @@ export default {
           message.content.length > 20
             ? message.content.substring(0, 20) + "..."
             : message.content;
-        // NEW: update lastMessageTime
         user.lastMessageTime = message.sent_at || new Date().toISOString();
 
         if (
@@ -330,13 +390,16 @@ export default {
         }
       }
     },
+
     scrollToBottom() {
       this.$nextTick(() => {
         const el = this.$refs.messages;
         if (el) el.scrollTop = el.scrollHeight;
       });
     },
+
     selectUser(user) {
+      this.updateNotificationState(user.name, false);
       user.hasNewMessage = false;
       this.selectedUser = user;
       this.newMessageUsers = this.newMessageUsers.filter(
@@ -349,6 +412,7 @@ export default {
         }
       });
     },
+
     formatTime(timestamp) {
       if (!timestamp) return "";
       const now = new Date();
@@ -372,11 +436,12 @@ export default {
         });
       }
     },
+
     backToUsers() {
       this.chatActive = false;
       this.selectedUser = null;
       localStorage.removeItem("selectedUser");
-    },
+    }
   },
 };
 </script>
