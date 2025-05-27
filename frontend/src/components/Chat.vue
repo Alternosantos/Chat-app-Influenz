@@ -244,10 +244,10 @@ export default {
     },
     loadNotifications() {
       try {
-        const saved = localStorage.getItem("chatNotifications");
+        const saved = localStorage.getItem(`chatNotifications_${this.sender}`);
         this.notifications = saved ? JSON.parse(saved) : {};
 
-        // Initialize users with saved notification states
+
         this.users = this.users.map((user) => ({
           ...user,
           hasNewMessage: this.notifications[user.name] || false,
@@ -260,7 +260,8 @@ export default {
 
     saveNotifications() {
       localStorage.setItem(
-        "chatNotifications",
+        `chatNotifications_${this.sender}`,
+
         JSON.stringify(this.notifications)
       );
     },
@@ -316,24 +317,24 @@ export default {
         }
 
         if (message.type === "activeUsers") {
-          const oldUsers = this.users || [];
+          const oldMetadata = this.loadUserMetadata();
+
           this.users = (message.users || [])
-            .filter((name) => !!name)
-            .filter((name) => name !== this.sender)
+            .filter((name) => !!name && name !== this.sender)
             .map((name) => {
-              const oldUser = oldUsers.find((u) => u.name === name);
+              const meta = oldMetadata[name] || {};
               return {
                 name,
                 avatar: `https://api.dicebear.com/6.x/identicon/svg?seed=${name}`,
-                lastMessage: oldUser ? oldUser.lastMessage : "",
-                hasNewMessage: oldUser ? oldUser.hasNewMessage : false,
-                lastMessageTime: oldUser ? oldUser.lastMessageTime : 0,
+                lastMessage: meta.lastMessage || "",
+                hasNewMessage: this.notifications?.[name] || false,
+                lastMessageTime: meta.lastMessageTime || 0,
               };
             })
             .sort((a, b) => {
-              const dateA = new Date(a.lastMessageTime || 0);
-              const dateB = new Date(b.lastMessageTime || 0);
-              return dateB - dateA;
+              if (!a.lastMessageTime) return 1;
+              if (!b.lastMessageTime) return -1;
+              return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
             });
         } else {
           const exists = this.messages.some(
@@ -343,13 +344,21 @@ export default {
           if (!exists) {
             this.messages.push(message);
             this.updateLastMessage(message);
-            this.updateNotificationState(message.sender, true);
+
+
+            const isCurrentChat =
+              this.selectedUser && this.selectedUser.name === message.sender;
+
+            if (!isCurrentChat && message.recipient === this.sender) {
+              this.updateNotificationState(message.sender, true);
+            }
 
             if (
               message.sender === this.selectedUser?.name ||
               message.recipient === this.selectedUser?.name
             ) {
               this.scrollToBottom();
+              this.saveUserMetadata();
             }
           }
         }
@@ -493,6 +502,31 @@ export default {
       this.selectedUser = null;
       localStorage.removeItem("selectedUser");
     },
+
+    saveUserMetadata() {
+      const metadata = this.users.reduce((acc, user) => {
+        acc[user.name] = {
+          lastMessage: user.lastMessage,
+          lastMessageTime: user.lastMessageTime,
+        };
+        return acc;
+      }, {});
+      localStorage.setItem(
+        `userMetadata_${this.sender}`,
+        JSON.stringify(metadata)
+      );
+    },
+
+    loadUserMetadata() {
+      try {
+        const stored = localStorage.getItem(`userMetadata_${this.sender}`);
+        return stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        console.error("Failed to load user metadata:", e);
+        return {};
+      }
+    },
+
   },
 };
 </script>
