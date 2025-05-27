@@ -82,6 +82,10 @@
               :class="['message', msg.sender === sender ? 'sent' : 'received']"
             >
               <span class="message-content">{{ msg.content }}</span>
+              <span v-if="msg.sender === sender && msg.seen" class="seen-status"
+                >✔✔</span
+              >
+
               <span class="message-time">{{ formatTime(msg.sent_at) }}</span>
             </div>
           </div>
@@ -138,8 +142,8 @@ export default {
       chatActive: false,
       isLoading: false,
       isConnecting: false,
-      notifications: {}, // Added notifications object
-      reconnectAttempts: 0 // Added reconnect counter
+      notifications: {},
+      reconnectAttempts: 0,
     };
   },
   created() {
@@ -161,16 +165,20 @@ export default {
   },
   mounted() {
     this.connectWebSocket();
+    if (this.activeChatUser) {
+      this.sendSeenStatus(this.activeChatUser.id);
+    }
   },
   beforeUnmount() {
     if (this.ws) this.ws.close();
     window.removeEventListener("resize", this.handleResize);
-    
+
     // Clean up old notifications
-    const currentUsers = this.users.map(u => u.name);
+    const currentUsers = this.users.map((u) => u.name);
     this.notifications = Object.fromEntries(
-      Object.entries(this.notifications)
-        .filter(([username]) => currentUsers.includes(username))
+      Object.entries(this.notifications).filter(([username]) =>
+        currentUsers.includes(username)
+      )
     );
     this.saveNotifications();
   },
@@ -188,8 +196,19 @@ export default {
         }
       }
     },
+    activeChatUser(newUser, oldUser) {
+      if (newUser && this.socket) {
+        this.sendSeenStatus(newUser.id);
+      }
+    },
   },
   computed: {
+    isCurrentChat() {
+      return (
+        this.selectedUser &&
+        this.messages.some((msg) => msg.sender === this.selectedUser.name)
+      );
+    },
     filteredUsers() {
       const q = this.searchQuery.toLowerCase();
       return this.users.filter((u) => u.name.toLowerCase().includes(q));
@@ -208,31 +227,49 @@ export default {
     },
   },
   methods: {
+    sendSeenStatus(senderId) {
+      if (
+        this.socket &&
+        this.currentUserId &&
+        senderId !== this.currentUserId
+      ) {
+        this.socket.send(
+          JSON.stringify({
+            type: "seen",
+            sender: senderId,
+            recipient: this.currentUserId,
+          })
+        );
+      }
+    },
     loadNotifications() {
       try {
-        const saved = localStorage.getItem('chatNotifications');
+        const saved = localStorage.getItem("chatNotifications");
         this.notifications = saved ? JSON.parse(saved) : {};
-        
+
         // Initialize users with saved notification states
-        this.users = this.users.map(user => ({
+        this.users = this.users.map((user) => ({
           ...user,
-          hasNewMessage: this.notifications[user.name] || false
+          hasNewMessage: this.notifications[user.name] || false,
         }));
       } catch (e) {
-        console.error('Failed to load notifications', e);
+        console.error("Failed to load notifications", e);
         this.notifications = {};
       }
     },
-    
+
     saveNotifications() {
-      localStorage.setItem('chatNotifications', JSON.stringify(this.notifications));
+      localStorage.setItem(
+        "chatNotifications",
+        JSON.stringify(this.notifications)
+      );
     },
 
     updateNotificationState(userName, hasUnread) {
       this.notifications[userName] = hasUnread;
       this.saveNotifications();
-      
-      const user = this.users.find(u => u.name === userName);
+
+      const user = this.users.find((u) => u.name === userName);
       if (user) {
         user.hasNewMessage = hasUnread;
       }
@@ -270,6 +307,13 @@ export default {
 
       this.ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
+        if (
+          !this.activeChatUser &&
+          message.recipient === this.sender &&
+          !message.seen
+        ) {
+          this.updateNotificationState(message.sender, true);
+        }
 
         if (message.type === "activeUsers") {
           const oldUsers = this.users || [];
@@ -299,13 +343,7 @@ export default {
           if (!exists) {
             this.messages.push(message);
             this.updateLastMessage(message);
-
-            const isCurrentChat = this.selectedUser && 
-                                this.selectedUser.name === message.sender;
-            
-            if (!isCurrentChat && message.recipient === this.sender) {
-              this.updateNotificationState(message.sender, true);
-            }
+            this.updateNotificationState(message.sender, true);
 
             if (
               message.sender === this.selectedUser?.name ||
@@ -399,7 +437,9 @@ export default {
     },
 
     selectUser(user) {
+      this.activeChatUser = user;
       this.updateNotificationState(user.name, false);
+      this.notifyMessagesSeen(user.name);
       user.hasNewMessage = false;
       this.selectedUser = user;
       this.newMessageUsers = this.newMessageUsers.filter(
@@ -411,6 +451,17 @@ export default {
           this.chatActive = true;
         }
       });
+    },
+    notifyMessagesSeen(senderName) {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(
+          JSON.stringify({
+            type: "seen",
+            sender: senderName,
+            recipient: this.sender,
+          })
+        );
+      }
     },
 
     formatTime(timestamp) {
@@ -441,7 +492,7 @@ export default {
       this.chatActive = false;
       this.selectedUser = null;
       localStorage.removeItem("selectedUser");
-    }
+    },
   },
 };
 </script>

@@ -64,6 +64,8 @@ type Message struct {
 	Sender    string    `json:"sender"`
 	Recipient string    `json:"recipient,omitempty"`
 	SentAt    time.Time `json:"sent_at,omitempty"`
+	Seen bool `json:"seen"`
+
 }
 
 func main() {
@@ -113,7 +115,8 @@ func main() {
 		recipient VARCHAR(255) NOT NULL,
 		sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		INDEX (sender),
-		INDEX (recipient)
+		INDEX (recipient),
+		seen BOOLEAN DEFAULT FALSE
 	)`)
 	if err != nil {
 		log.Fatal(err)
@@ -215,7 +218,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.Query(`
-		SELECT sender, recipient, content, sent_at
+		SELECT sender, recipient, content, sent_at, seen
 		FROM messages
 		WHERE (sender = ? AND recipient = ?)
 		   OR (sender = ? AND recipient = ?)
@@ -232,7 +235,7 @@ func getMessages(w http.ResponseWriter, r *http.Request) {
 	var messages []Message
 	for rows.Next() {
 		var msg Message
-		if err := rows.Scan(&msg.Sender, &msg.Recipient, &msg.Content, &msg.SentAt); err != nil {
+		if err := rows.Scan(&msg.Sender, &msg.Recipient, &msg.Content, &msg.SentAt, &msg.Seen); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
@@ -282,14 +285,28 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-		var msg Message
-		if err := ws.ReadJSON(&msg); err != nil {
-			log.Printf("Read error: %v", err)
-			break
+	var msg Message
+	if err := ws.ReadJSON(&msg); err != nil {
+		log.Printf("Read error: %v", err)
+		break
+	}
+
+	switch msg.Type {
+	case "seen":
+		_, err := db.Exec(`
+			UPDATE messages 
+			SET seen = TRUE 
+			WHERE sender = ? AND recipient = ? AND seen = FALSE
+		`, msg.Sender, msg.Recipient)
+		if err != nil {
+			log.Printf("Failed to mark messages as seen: %v", err)
 		}
+	default:
 		msg.SentAt = time.Now()
 		broadcast <- msg
 	}
+}
+
 }
 
 func handleMessages() {
