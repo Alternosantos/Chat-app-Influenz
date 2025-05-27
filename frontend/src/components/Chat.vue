@@ -82,6 +82,10 @@
               :class="['message', msg.sender === sender ? 'sent' : 'received']"
             >
               <span class="message-content">{{ msg.content }}</span>
+              <span v-if="msg.sender === sender && msg.seen" class="seen-status"
+                >✔✔</span
+              >
+
               <span class="message-time">{{ formatTime(msg.sent_at) }}</span>
             </div>
           </div>
@@ -138,8 +142,8 @@ export default {
       chatActive: false,
       isLoading: false,
       isConnecting: false,
-      notifications: {}, // Added notifications object
-      reconnectAttempts: 0, // Added reconnect counter
+      notifications: {},
+      reconnectAttempts: 0,
     };
   },
   created() {
@@ -161,6 +165,9 @@ export default {
   },
   mounted() {
     this.connectWebSocket();
+    if (this.activeChatUser) {
+      this.sendSeenStatus(this.activeChatUser.id);
+    }
   },
   beforeUnmount() {
     if (this.ws) this.ws.close();
@@ -189,8 +196,19 @@ export default {
         }
       }
     },
+    activeChatUser(newUser, oldUser) {
+      if (newUser && this.socket) {
+        this.sendSeenStatus(newUser.id);
+      }
+    },
   },
   computed: {
+    isCurrentChat() {
+      return (
+        this.selectedUser &&
+        this.messages.some((msg) => msg.sender === this.selectedUser.name)
+      );
+    },
     filteredUsers() {
       const q = this.searchQuery.toLowerCase();
       return this.users.filter((u) => u.name.toLowerCase().includes(q));
@@ -209,10 +227,26 @@ export default {
     },
   },
   methods: {
+    sendSeenStatus(senderId) {
+      if (
+        this.socket &&
+        this.currentUserId &&
+        senderId !== this.currentUserId
+      ) {
+        this.socket.send(
+          JSON.stringify({
+            type: "seen",
+            sender: senderId,
+            recipient: this.currentUserId,
+          })
+        );
+      }
+    },
     loadNotifications() {
       try {
         const saved = localStorage.getItem(`chatNotifications_${this.sender}`);
         this.notifications = saved ? JSON.parse(saved) : {};
+
 
         this.users = this.users.map((user) => ({
           ...user,
@@ -223,9 +257,11 @@ export default {
         this.notifications = {};
       }
     },
+
     saveNotifications() {
       localStorage.setItem(
         `chatNotifications_${this.sender}`,
+
         JSON.stringify(this.notifications)
       );
     },
@@ -272,6 +308,13 @@ export default {
 
       this.ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
+        if (
+          !this.activeChatUser &&
+          message.recipient === this.sender &&
+          !message.seen
+        ) {
+          this.updateNotificationState(message.sender, true);
+        }
 
         if (message.type === "activeUsers") {
           const oldMetadata = this.loadUserMetadata();
@@ -301,6 +344,7 @@ export default {
           if (!exists) {
             this.messages.push(message);
             this.updateLastMessage(message);
+
 
             const isCurrentChat =
               this.selectedUser && this.selectedUser.name === message.sender;
@@ -402,7 +446,9 @@ export default {
     },
 
     selectUser(user) {
+      this.activeChatUser = user;
       this.updateNotificationState(user.name, false);
+      this.notifyMessagesSeen(user.name);
       user.hasNewMessage = false;
       this.selectedUser = user;
       this.newMessageUsers = this.newMessageUsers.filter(
@@ -414,6 +460,17 @@ export default {
           this.chatActive = true;
         }
       });
+    },
+    notifyMessagesSeen(senderName) {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(
+          JSON.stringify({
+            type: "seen",
+            sender: senderName,
+            recipient: this.sender,
+          })
+        );
+      }
     },
 
     formatTime(timestamp) {
@@ -445,6 +502,7 @@ export default {
       this.selectedUser = null;
       localStorage.removeItem("selectedUser");
     },
+
     saveUserMetadata() {
       const metadata = this.users.reduce((acc, user) => {
         acc[user.name] = {
@@ -468,6 +526,7 @@ export default {
         return {};
       }
     },
+
   },
 };
 </script>
